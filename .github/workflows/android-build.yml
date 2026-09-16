@@ -24,21 +24,35 @@ jobs:
           mkdir -p buildsrc
           unzip -q MASOUD_Android_v1.zip -d buildsrc
           echo "Extracted files:"
-          find buildsrc -maxdepth 3 -type f | head -200
+          find buildsrc -maxdepth 4 -type f | sort | head -250
 
-      - name: Detect Gradle project and build APK
+      - name: Build APK
         shell: bash
         run: |
           set -e
-          GRADLEW=$(find buildsrc -type f -name gradlew | head -1)
-          if [ -z "$GRADLEW" ]; then
-            echo "ERROR: gradlew not found inside MASOUD_Android_v1.zip"
+          PROJECT_DIR=$(dirname "$(find buildsrc -type f -name settings.gradle | head -1)")
+          if [ -z "$PROJECT_DIR" ] || [ "$PROJECT_DIR" = "." ]; then
+            echo "ERROR: Gradle project root not found"
             exit 2
           fi
-          PROJECT_DIR=$(dirname "$GRADLEW")
           cd "$PROJECT_DIR"
-          chmod +x gradlew
-          ./gradlew assembleDebug --stacktrace
+          echo "===== build.gradle ====="
+          cat build.gradle || true
+          echo "===== app/build.gradle ====="
+          cat app/build.gradle || true
+          echo "===== gradle.properties ====="
+          cat gradle.properties || true
+
+          if [ -f gradlew ]; then
+            chmod +x gradlew
+            ./gradlew assembleDebug --stacktrace
+          elif command -v gradle >/dev/null 2>&1; then
+            gradle --version
+            gradle assembleDebug --stacktrace
+          else
+            echo "ERROR: no Gradle wrapper and no system Gradle available"
+            exit 3
+          fi
 
       - name: Collect APK
         if: success()
