@@ -22,49 +22,36 @@ jobs:
         run: |
           rm -rf buildsrc
           mkdir -p buildsrc
-          unzip -q MASOUD_Android_v1.zip -d buildsrc
-          echo "Extracted files:"
+          unzip -q MASOUD_Android_v2.zip -d buildsrc
+          echo "Using MASOUD Android V2 source"
           find buildsrc -maxdepth 4 -type f | sort | head -250
 
       - name: Build APK
         shell: bash
         run: |
           set -e
-          PROJECT_DIR=$(dirname "$(find buildsrc -type f -name settings.gradle | head -1)")
-          if [ -z "$PROJECT_DIR" ] || [ "$PROJECT_DIR" = "." ]; then
-            echo "ERROR: Gradle project root not found"
-            exit 2
-          fi
-          cd "$PROJECT_DIR"
-          echo "===== build.gradle ====="
-          cat build.gradle || true
-          echo "===== app/build.gradle ====="
-          cat app/build.gradle || true
-          echo "===== gradle.properties ====="
-          cat gradle.properties || true
+          cd buildsrc
+          gradle --version
+          gradle assembleDebug --stacktrace
 
-          if [ -f gradlew ]; then
-            chmod +x gradlew
-            ./gradlew assembleDebug --stacktrace
-          elif command -v gradle >/dev/null 2>&1; then
-            gradle --version
-            gradle assembleDebug --stacktrace
-          else
-            echo "ERROR: no Gradle wrapper and no system Gradle available"
-            exit 3
-          fi
+      - name: Verify APK
+        run: |
+          APK=$(find buildsrc -type f -name '*.apk' | head -1)
+          test -n "$APK"
+          test -s "$APK"
+          unzip -t "$APK" >/dev/null
+          ls -lh "$APK"
+          sha256sum "$APK"
 
       - name: Collect APK
-        if: success()
         run: |
           mkdir -p output
-          find buildsrc -type f -name '*.apk' -exec cp {} output/ \;
-          ls -lah output
+          APK=$(find buildsrc -type f -name '*.apk' | head -1)
+          cp "$APK" output/MASOUD_Raja_Android_V2.apk
 
       - name: Upload APK
-        if: success()
         uses: actions/upload-artifact@v4
         with:
-          name: MASOUD-Raja-Android-APK
-          path: output/*.apk
+          name: MASOUD-Raja-Android-V2-APK
+          path: output/MASOUD_Raja_Android_V2.apk
           if-no-files-found: error
