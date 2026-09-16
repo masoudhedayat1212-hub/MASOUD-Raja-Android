@@ -1,0 +1,57 @@
+name: Android Build
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: gradle
+
+      - name: Unpack project
+        run: |
+          rm -rf buildsrc
+          mkdir -p buildsrc
+          unzip -q MASOUD_Android_v1.zip -d buildsrc
+          echo "Extracted files:"
+          find buildsrc -maxdepth 3 -type f | head -200
+
+      - name: Detect Gradle project and build APK
+        shell: bash
+        run: |
+          set -e
+          GRADLEW=$(find buildsrc -type f -name gradlew | head -1)
+          if [ -z "$GRADLEW" ]; then
+            echo "ERROR: gradlew not found inside MASOUD_Android_v1.zip"
+            exit 2
+          fi
+          PROJECT_DIR=$(dirname "$GRADLEW")
+          cd "$PROJECT_DIR"
+          chmod +x gradlew
+          ./gradlew assembleDebug --stacktrace
+
+      - name: Collect APK
+        if: success()
+        run: |
+          mkdir -p output
+          find buildsrc -type f -name '*.apk' -exec cp {} output/ \;
+          ls -lah output
+
+      - name: Upload APK
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: MASOUD-Raja-Android-APK
+          path: output/*.apk
+          if-no-files-found: error
