@@ -18,100 +18,82 @@ jobs:
           distribution: temurin
           java-version: '17'
 
-      - name: Unpack original working project
-        run: |
-          rm -rf buildsrc
-          mkdir -p buildsrc
-          unzip -q MASOUD_Android_v1.zip -d buildsrc
-          test -f buildsrc/MASOUD_Android/app/src/main/java/com/masoud/raja/MainActivity.java
-          cp buildsrc/MASOUD_Android/app/src/main/java/com/masoud/raja/MainActivity.java /tmp/MainActivity_v1.java
-
-      - name: Apply approved V3 UI on V1 logic
+      - name: Unpack V5 and V1 reference
         shell: bash
         run: |
-          set -e
-          APP=buildsrc/MASOUD_Android
-          cp v3/MainActivity.java "$APP/app/src/main/java/com/masoud/raja/MainActivity.java"
-          sed -i 's/import android.app.Ringtone;/import android.media.Ringtone;/' "$APP/app/src/main/java/com/masoud/raja/MainActivity.java"
-          sed -i 's/import android.app.RingtoneManager;/import android.media.RingtoneManager;/' "$APP/app/src/main/java/com/masoud/raja/MainActivity.java"
+          set -euo pipefail
+          rm -rf buildsrc refsrc
+          mkdir -p buildsrc refsrc
+          unzip -q MASOUD_Android_v5.zip -d buildsrc
+          unzip -q MASOUD_Android_v1.zip -d refsrc
+          test -f buildsrc/MASOUD_Android/app/src/main/java/com/masoud/raja/MainActivity.java
+          test -f refsrc/MASOUD_Android/app/src/main/java/com/masoud/raja/MainActivity.java
 
-          python - <<'PY'
+      - name: Verify requested V5 structure and healthy baseline
+        shell: bash
+        run: |
+          set -euo pipefail
+          V5=buildsrc/MASOUD_Android/app/src/main/java/com/masoud/raja/MainActivity.java
+          V1=refsrc/MASOUD_Android/app/src/main/java/com/masoud/raja/MainActivity.java
+          grep -q 'private static final String VERSION = "V5"' "$V5"
+          grep -q 'REFRESH_PRESETS = {"1","2","3","4","5","6","7","8","9","10"}' "$V5"
+          grep -q 'R.drawable.train_banner' "$V5"
+          grep -q 'مبدا — تایپ یا انتخاب' "$V5"
+          grep -q 'مقصد — تایپ یا انتخاب' "$V5"
+          grep -q 'خروج از حساب رجا' "$V5"
+          grep -q 'تاریخ رفت واقعاً ثبت شد' "$V5"
+          grep -q 'pageAdvanceRunnable' "$V5"
+          grep -q 'Math.max(1.0,Math.min(10.0' "$V5"
+          test -s buildsrc/MASOUD_Android/app/src/main/res/drawable-nodpi/train_banner.jpg
+          python3 - <<'PY'
           from pathlib import Path
-          old=Path('/tmp/MainActivity_v1.java').read_text(encoding='utf-8')
-          new=Path('buildsrc/MASOUD_Android/app/src/main/java/com/masoud/raja/MainActivity.java').read_text(encoding='utf-8')
-          pairs=[
-              ('private void injectLogin(){','private void injectSearchForm(){'),
-              ('private void injectSearchForm(){','private void inspectResultsAndReserve(){'),
-              ('private void inspectResultsAndReserve(){','private void fillPassengerPage(){'),
-              ('private void fillPassengerPage(){','private int parseInt('),
-          ]
-          for start,end in pairs:
-              a=old[old.index(start):old.index(end)]
-              b=new[new.index(start):new.index(end)]
-              if a!=b:
-                  raise SystemExit('V1 automation logic changed unexpectedly: '+start)
-          for exact in [
-              '@JavascriptInterface public void loginClicked(){ runOnUiThread(()->{ loggedIn=true; log("دکمه ورود زده شد؛ منتظر تکمیل ورود..."); handler.postDelayed(()->advanceAutomation(),2600); }); }',
-              '@JavascriptInterface public void searchClicked(){ runOnUiThread(()->{ searchSubmitted=true; nextRefreshAt=System.currentTimeMillis()+(long)(getRefreshSeconds()*1000); log("جستجو ارسال شد؛ پایش مداوم فعال است."); handler.postDelayed(()->advanceAutomation(),1300); }); }'
-          ]:
-              if exact not in new:
-                  raise SystemExit('V1 timing/login behavior not preserved')
-          print('V1 Raja login/search/reserve automation preserved')
+          import re
+          v1=Path('refsrc/MASOUD_Android/app/src/main/java/com/masoud/raja/MainActivity.java').read_text(encoding='utf-8')
+          v5=Path('buildsrc/MASOUD_Android/app/src/main/java/com/masoud/raja/MainActivity.java').read_text(encoding='utf-8')
+          def method(src,name,next_name):
+              m=re.search(r'    private void '+name+r'\(\)\{.*?(?=    private void '+next_name+r'\()',src,re.S)
+              if not m: raise SystemExit('method missing: '+name)
+              return m.group(0)
+          for name,nxt in [('injectLogin','injectSearchForm'),('inspectResultsAndReserve','fillPassengerPage')]:
+              if method(v1,name,nxt) != method(v5,name,nxt):
+                  raise SystemExit(name+' changed from healthy V1')
+          if 'handler.postDelayed(()->advanceAutomation(),2600);' not in v5:
+              raise SystemExit('V1 login timing changed')
+          if 'handler.postDelayed(()->advanceAutomation(),1300);' not in v5:
+              raise SystemExit('V1 search timing changed')
+          print('V5 checks passed; V1 login/reserve core preserved')
           PY
-
-          python - <<'PY'
-          from pathlib import Path
-          app=Path('buildsrc/MASOUD_Android')
-          manifest=app/'app/src/main/AndroidManifest.xml'
-          s=manifest.read_text(encoding='utf-8')
-          s=s.replace('android:label="MASOUD" android:usesCleartextTraffic="false"','android:label="MASOUD Raja" android:icon="@drawable/ic_train" android:roundIcon="@drawable/ic_train" android:usesCleartextTraffic="false"')
-          manifest.write_text(s,encoding='utf-8')
-
-          gradle=app/'app/build.gradle'
-          s=gradle.read_text(encoding='utf-8').replace('versionCode 1','versionCode 3').replace("versionName '1.0.0'","versionName '3.0.0'")
-          gradle.write_text(s,encoding='utf-8')
-
-          drawable=app/'app/src/main/res/drawable'
-          drawable.mkdir(parents=True,exist_ok=True)
-          (drawable/'ic_train.xml').write_text('''<vector xmlns:android="http://schemas.android.com/apk/res/android" android:width="108dp" android:height="108dp" android:viewportWidth="108" android:viewportHeight="108"><path android:fillColor="#071018" android:pathData="M0,0h108v108h-108z"/><path android:fillColor="#F4F7FB" android:pathData="M30,16c-8,0 -14,6 -14,14v42c0,8 6,14 14,14l-7,9v3h11l9,-10h22l9,10h11v-3l-7,-9c8,0 14,-6 14,-14V30c0,-8 -6,-14 -14,-14H30zM29,28h50v22H29V28zM31,61a7,7 0,1 1,0 14a7,7 0,0 1,0 -14zM77,61a7,7 0,1 1,0 14a7,7 0,0 1,0 -14z"/><path android:fillColor="#0084FF" android:pathData="M37,34h34v10H37z"/></vector>''',encoding='utf-8')
-          PY
-
-          grep -q 'MASOUD Raja Bot  •  V3' "$APP/app/src/main/java/com/masoud/raja/MainActivity.java"
-          grep -q 'for(int i=1;i<=10;i++)' "$APP/app/src/main/java/com/masoud/raja/MainActivity.java"
-          grep -q 'مبدا — تایپ یا انتخاب' "$APP/app/src/main/java/com/masoud/raja/MainActivity.java"
-          grep -q 'کپی لاگ' "$APP/app/src/main/java/com/masoud/raja/MainActivity.java"
-          grep -q 'android:icon="@drawable/ic_train"' "$APP/app/src/main/AndroidManifest.xml"
 
       - name: Build APK
         shell: bash
         run: |
-          set -e
+          set -euo pipefail
           cd buildsrc/MASOUD_Android
           gradle --version
           gradle assembleDebug --stacktrace
 
       - name: Verify APK
+        shell: bash
         run: |
-          APK=$(find buildsrc -type f -name '*.apk' | head -1)
+          set -euo pipefail
+          APK=$(find buildsrc/MASOUD_Android/app/build/outputs/apk -type f -name '*.apk' | head -1)
           test -n "$APK"
           test -s "$APK"
           unzip -t "$APK" >/dev/null
-          echo "APK=$APK"
           ls -lh "$APK"
           sha256sum "$APK"
-          if command -v aapt >/dev/null 2>&1; then
-            aapt dump badging "$APK" | head -20
-          fi
 
       - name: Collect APK
+        shell: bash
         run: |
+          set -euo pipefail
           mkdir -p output
-          APK=$(find buildsrc -type f -name '*.apk' | head -1)
-          cp "$APK" output/MASOUD_Raja_Android_V3.apk
+          APK=$(find buildsrc/MASOUD_Android/app/build/outputs/apk -type f -name '*.apk' | head -1)
+          cp "$APK" output/MASOUD_Raja_Android_V5.apk
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: MASOUD-Raja-Android-V3-APK
-          path: output/MASOUD_Raja_Android_V3.apk
+          name: MASOUD-Raja-Android-V5-APK
+          path: output/MASOUD_Raja_Android_V5.apk
           if-no-files-found: error
