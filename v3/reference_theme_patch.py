@@ -2,6 +2,8 @@ from pathlib import Path
 import re
 p=Path('buildsrc/MASOUD_Android/app/src/main/java/com/masoud/raja/MainActivity.java')
 s=p.read_text(encoding='utf-8')
+s=s.replace('import android.app.Ringtone;','import android.media.Ringtone;')
+s=s.replace('import android.app.RingtoneManager;','import android.media.RingtoneManager;')
 
 # Light reference palette; bot logic below remains untouched.
 s=re.sub(r'private static final int BG = .*?;', 'private static final int BG = Color.rgb(244,250,255);', s)
@@ -16,22 +18,12 @@ s=re.sub(r'private static final int GREEN = .*?;', 'private static final int GRE
 s=re.sub(r'private static final int RED = .*?;', 'private static final int RED = Color.rgb(235,74,84);', s)
 s=re.sub(r'private static final int BORDER = .*?;', 'private static final int BORDER = Color.rgb(222,232,241);', s)
 
-# Helpers for reference cards.
 anchor='    private void buildUi() {'
 helper=r'''    private TextView refIcon(String text){
         TextView v=new TextView(this); v.setText(text); v.setTextColor(BLUE); v.setTextSize(30); v.setGravity(Gravity.CENTER);
         v.setTypeface(null,1); v.setBackground(bg(Color.rgb(237,247,255),28,Color.rgb(230,239,247),1)); v.setElevation(dp(4)); return v;
     }
     private TextView refArrow(){ TextView v=new TextView(this); v.setText("›"); v.setTextColor(Color.rgb(111,130,158)); v.setTextSize(42); v.setGravity(Gravity.CENTER); return v; }
-    private LinearLayout refCard(String labelText, String valueText, String iconText){
-        LinearLayout row=new LinearLayout(this); row.setOrientation(LinearLayout.HORIZONTAL); row.setGravity(Gravity.CENTER_VERTICAL); row.setPadding(dp(14),dp(7),dp(14),dp(7));
-        row.setBackground(bg(Color.WHITE,24,Color.rgb(228,235,242),1)); row.setElevation(dp(5)); row.setLayoutDirection(View.LAYOUT_DIRECTION_LTR);
-        TextView icon=refIcon(iconText); row.addView(icon,new LinearLayout.LayoutParams(dp(62),dp(62))); gapH(row,10);
-        LinearLayout txt=new LinearLayout(this); txt.setOrientation(LinearLayout.VERTICAL); txt.setGravity(Gravity.RIGHT|Gravity.CENTER_VERTICAL); txt.setLayoutDirection(View.LAYOUT_DIRECTION_RTL);
-        TextView l=new TextView(this); l.setText(labelText); l.setTextColor(MUTED); l.setTextSize(15); l.setGravity(Gravity.RIGHT); txt.addView(l,new LinearLayout.LayoutParams(-1,dp(25)));
-        TextView val=new TextView(this); val.setText(valueText); val.setTextColor(TEXT); val.setTextSize(23); val.setTypeface(null,1); val.setGravity(Gravity.RIGHT); txt.addView(val,new LinearLayout.LayoutParams(-1,dp(34)));
-        row.addView(txt,new LinearLayout.LayoutParams(0,dp(62),1)); row.addView(refArrow(),new LinearLayout.LayoutParams(dp(34),dp(62))); return row;
-    }
     private LinearLayout refInputCard(String labelText, EditText field, String iconText){
         LinearLayout row=new LinearLayout(this); row.setOrientation(LinearLayout.HORIZONTAL); row.setGravity(Gravity.CENTER_VERTICAL); row.setPadding(dp(14),dp(7),dp(14),dp(7));
         row.setBackground(bg(Color.WHITE,24,Color.rgb(228,235,242),1)); row.setElevation(dp(5)); row.setLayoutDirection(View.LAYOUT_DIRECTION_LTR);
@@ -43,7 +35,7 @@ helper=r'''    private TextView refIcon(String text){
     }
 
 '''
-if helper not in s:
+if 'private TextView refIcon(String text)' not in s:
     s=s.replace(anchor,helper+anchor,1)
 
 def replace_method(src, signature, body):
@@ -105,7 +97,6 @@ run=r'''    private LinearLayout makeRunPanel(){
     }'''
 s=replace_method(s,'    private LinearLayout makeRunPanel(){',run)
 
-# Account tab: keep credentials available in the reference palette, with a button to open Raja browser.
 acc=r'''    private LinearLayout makeBrowserPanel(){
         LinearLayout box=new LinearLayout(this); box.setOrientation(LinearLayout.VERTICAL); box.setPadding(dp(18),dp(18),dp(18),dp(18)); box.setBackgroundColor(BG);
         TextView title=label("اکانت رجا"); title.setTextColor(TEXT); title.setTextSize(24); title.setTypeface(null,1); title.setGravity(Gravity.RIGHT); box.addView(title,new LinearLayout.LayoutParams(-1,dp(50)));
@@ -117,6 +108,4 @@ acc=r'''    private LinearLayout makeBrowserPanel(){
     }'''
 s=replace_method(s,'    private LinearLayout makeBrowserPanel(){',acc)
 
-# Preserve V3 identity in title/visible build strings if present.
-s=s.replace('MASOUD Raja Bot  •  V3','MASOUD Raja Bot  •  V3')
 p.write_text(s,encoding='utf-8')
