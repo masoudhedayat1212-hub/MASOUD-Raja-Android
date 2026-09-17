@@ -57,8 +57,12 @@ jobs:
           grep -q 'اکانت رجا' "$MAIN"
           grep -q 'اجرای ربات قطار' "$MAIN"
           grep -q 'private void startBot()' "$MAIN"
-          grep -q "applicationId 'com.masoud.raja.v3ref'" buildsrc/MASOUD_Android/app/build.gradle
-          grep -q 'versionCode 9' buildsrc/MASOUD_Android/app/build.gradle
+          python3 - <<'PY'
+          from pathlib import Path
+          t=Path('buildsrc/MASOUD_Android/app/build.gradle').read_text(encoding='utf-8')
+          assert "applicationId 'com.masoud.raja.v3ref'" in t
+          assert 'versionCode 9' in t
+          PY
 
       - name: Build APK
         shell: bash
