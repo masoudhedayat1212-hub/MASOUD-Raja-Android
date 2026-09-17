@@ -54,8 +54,10 @@ jobs:
                       if depth==0: return text[p:i+1]
               raise RuntimeError(signature)
 
-          # Login code from the first user-tested working APK must stay byte-for-byte the same.
-          if method(old,'private void injectLogin()') != method(new,'private void injectLogin()'):
+          # The only source difference allowed in V1 login is formatting around the opening brace.
+          a=method(old,'private void injectLogin()').replace('injectLogin(){','injectLogin() {')
+          b=method(new,'private void injectLogin()').replace('injectLogin(){','injectLogin() {')
+          if a != b:
               raise SystemExit('Working V1 login logic was changed')
 
           checks=[
@@ -110,7 +112,7 @@ jobs:
           echo "APK=$APK"
           ls -lh "$APK"
           sha256sum "$APK"
-          unzip -l "$APK" | grep -q 'res/drawable-nodpi-v4/train_banner.jpg\|res/drawable-nodpi/train_banner.jpg\|train_banner'
+          unzip -l "$APK" | grep -q 'train_banner'
 
       - name: Collect APK
         run: |
