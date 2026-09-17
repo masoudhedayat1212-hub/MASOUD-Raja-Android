@@ -263,7 +263,6 @@ public class MainActivity extends Activity {
         @JavascriptInterface public void notFound(){ runOnUiThread(()->{ reserved=false; status.setText("● یافت نشد؛ جستجوی مجدد..."); log("بلیط مطابق معیار فعلاً یافت نشد."); }); }
     }
 
-}
     private class HeroView extends View {
         private final Paint p=new Paint(Paint.ANTI_ALIAS_FLAG);
         HeroView(Context c){ super(c); }
@@ -307,4 +306,4 @@ public class MainActivity extends Activity {
             p.setColor(Color.rgb(17,111,225)); p.setTextSize(dp(15)); p.setFakeBoldText(true); p.setTextAlign(Paint.Align.CENTER); canvas.drawText("W2",w*.895f,h*.22f,p);
         }
     }
-
+}
