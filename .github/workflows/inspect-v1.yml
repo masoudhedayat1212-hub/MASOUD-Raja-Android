@@ -1,0 +1,24 @@
+name: Inspect V1 Source
+on:
+  push:
+    paths:
+      - '.github/workflows/inspect-v1.yml'
+  workflow_dispatch:
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Extract V1
+        run: |
+          rm -rf /tmp/v1
+          mkdir -p /tmp/v1
+          unzip -q MASOUD_Android_v1.zip -d /tmp/v1
+          echo '=== TREE ==='
+          find /tmp/v1 -maxdepth 8 -type f | sort
+          echo '=== MAIN ACTIVITY ==='
+          find /tmp/v1 -name 'MainActivity.java' -print -exec sed -n '1,260p' {} \;
+          echo '=== XML RESOURCES ==='
+          find /tmp/v1 -type f -name '*.xml' -print -exec sh -c 'echo --- $1; sed -n "1,220p" "$1"' _ {} \;
+          echo '=== GRADLE ==='
+          find /tmp/v1 -type f \( -name 'build.gradle' -o -name 'settings.gradle' \) -print -exec sed -n '1,220p' {} \;
