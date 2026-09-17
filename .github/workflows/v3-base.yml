@@ -52,10 +52,10 @@ jobs:
           APK=$(find buildsrc/MASOUD_Android/app/build/outputs/apk -type f -name '*.apk' | head -1)
           test -s "$APK"
           unzip -t "$APK" >/dev/null
-          mkdir -p output
-          cp "$APK" output/MASOUD_Raja_V3_BASE.apk
+          mkdir -p "$GITHUB_WORKSPACE/output"
+          cp "$APK" "$GITHUB_WORKSPACE/output/MASOUD_Raja_V3_BASE.apk"
       - uses: actions/upload-artifact@v4
         with:
           name: MASOUD-Raja-V3-BASE
-          path: buildsrc/MASOUD_Android/output/MASOUD_Raja_V3_BASE.apk
+          path: output/MASOUD_Raja_V3_BASE.apk
           if-no-files-found: error
