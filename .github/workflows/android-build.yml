@@ -18,7 +18,7 @@ jobs:
           distribution: temurin
           java-version: '17'
 
-      - name: Prepare refined V8 reference build
+      - name: Prepare V3 reference theme build
         shell: bash
         run: |
           set -euo pipefail
@@ -27,44 +27,36 @@ jobs:
           unzip -q MASOUD_Android_v1.zip -d buildsrc
           APP=buildsrc/MASOUD_Android
           MAIN="$APP/app/src/main/java/com/masoud/raja/MainActivity.java"
-          mkdir -p "$APP/app/src/main/res/drawable" "$APP/app/src/main/res/drawable-nodpi"
+          mkdir -p "$APP/app/src/main/res/drawable-nodpi"
+          cp v3/MainActivity.java "$MAIN"
           python3 - <<'PY'
           from pathlib import Path
-          import base64,gzip,re
-          def dec(path):
-              s=Path(path).read_text(encoding='utf-8')
-              s=re.sub(r'[^A-Za-z0-9+/=]','',s)
-              s += '='*((4-len(s)%4)%4)
-              return base64.b64decode(s,validate=False)
-          Path('buildsrc/MASOUD_Android/app/src/main/java/com/masoud/raja/MainActivity.java').write_bytes(gzip.decompress(dec('v5/MainActivity.java.gz.b64')))
-          Path('buildsrc/MASOUD_Android/app/src/main/res/drawable-nodpi/train_banner.jpg').write_bytes(dec('v5/train_banner.b64'))
+          import base64,re
+          s=Path('v3/header_reference.b64').read_text(encoding='utf-8')
+          s=re.sub(r'[^A-Za-z0-9+/=]','',s)
+          s += '='*((4-len(s)%4)%4)
+          Path('buildsrc/MASOUD_Android/app/src/main/res/drawable-nodpi/header_reference_v3.jpg').write_bytes(base64.b64decode(s))
+          g=Path('buildsrc/MASOUD_Android/app/build.gradle')
+          t=g.read_text(encoding='utf-8')
+          t=re.sub(r'versionCode\s+\d+','versionCode 3',t)
+          t=re.sub(r'versionName\s+"[^"]+"','versionName "3.0"',t)
+          g.write_text(t,encoding='utf-8')
           PY
-          cp v5/ic_train.xml "$APP/app/src/main/res/drawable/ic_train.xml"
-          python3 v6/patch.py
-          python3 v8/patch_v8.py
-          python3 v8/compact_patch.py
-          python3 v8/final_theme_patch.py
+          python3 v3/reference_theme_patch.py
 
-      - name: Verify V8 reference UI and Raja logic
+      - name: Verify V3 reference UI and logic
         shell: bash
         run: |
           set -euo pipefail
           MAIN=buildsrc/MASOUD_Android/app/src/main/java/com/masoud/raja/MainActivity.java
-          grep -q 'private static final String VERSION = "V8"' "$MAIN"
-          grep -q 'ReferenceHeroView' "$MAIN"
-          grep -q 'RefIconView' "$MAIN"
+          test -s buildsrc/MASOUD_Android/app/src/main/res/drawable-nodpi/header_reference_v3.jpg
+          file buildsrc/MASOUD_Android/app/src/main/res/drawable-nodpi/header_reference_v3.jpg | grep -q 'JPEG image data'
+          grep -q 'R.drawable.header_reference_v3' "$MAIN"
           grep -q 'یک طرفه' "$MAIN"
           grep -q 'اکانت رجا' "$MAIN"
-          grep -q 'شماره قطار' "$MAIN"
-          grep -q 'از قیمت' "$MAIN"
-          grep -q 'تا قیمت' "$MAIN"
-          grep -q 'تاریخ حرکت' "$MAIN"
-          grep -q '1 مسافر' "$MAIN"
           grep -q 'اجرای ربات قطار' "$MAIN"
-          grep -q 'private void injectLoginFixed()' "$MAIN"
-          grep -q 'injectLoginFixed();' "$MAIN"
-          grep -q 'LOGIN_FALLBACK_CLICKED' "$MAIN"
-          grep -q 'versionCode 8' buildsrc/MASOUD_Android/app/build.gradle
+          grep -q 'private void startBot()' "$MAIN"
+          grep -q 'versionCode 3' buildsrc/MASOUD_Android/app/build.gradle
 
       - name: Build APK
         shell: bash
@@ -82,11 +74,11 @@ jobs:
           unzip -t "$APK" >/dev/null
           sha256sum "$APK"
           mkdir -p "$GITHUB_WORKSPACE/output"
-          cp "$APK" "$GITHUB_WORKSPACE/output/MASOUD_Raja_V8_REFERENCE_FIXED.apk"
+          cp "$APK" "$GITHUB_WORKSPACE/output/MASOUD_Raja_V3_REFERENCE_THEME.apk"
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: MASOUD-Raja-V8-REFERENCE-FIXED
-          path: output/MASOUD_Raja_V8_REFERENCE_FIXED.apk
+          name: MASOUD-Raja-V3-REFERENCE-THEME
+          path: output/MASOUD_Raja_V3_REFERENCE_THEME.apk
           if-no-files-found: error
