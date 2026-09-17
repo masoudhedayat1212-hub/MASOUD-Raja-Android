@@ -3,6 +3,7 @@ on:
   push:
     paths:
       - '.github/workflows/build-v8-reference.yml'
+      - 'v8/header_reference.b64'
   workflow_dispatch:
 
 jobs:
@@ -14,7 +15,8 @@ jobs:
         with:
           distribution: temurin
           java-version: '17'
-      - name: Prepare V8 from V1
+
+      - name: Prepare exact V8 reference UI on V1 logic
         shell: bash
         run: |
           set -euo pipefail
@@ -23,23 +25,27 @@ jobs:
           unzip -q MASOUD_Android_v1.zip -d buildsrc
           APP=buildsrc/MASOUD_Android
           MAIN="$APP/app/src/main/java/com/masoud/raja/MainActivity.java"
-          mkdir -p "$APP/app/src/main/res/drawable"
+          mkdir -p "$APP/app/src/main/res/drawable-nodpi" "$APP/app/src/main/res/drawable"
+          base64 -d v8/header_reference.b64 > "$APP/app/src/main/res/drawable-nodpi/header_reference.jpg"
           cp v5/ic_train.xml "$APP/app/src/main/res/drawable/ic_train.xml"
+
           python3 - <<'PY'
           from pathlib import Path
           import re
+
           p=Path('buildsrc/MASOUD_Android/app/src/main/java/com/masoud/raja/MainActivity.java')
           s=p.read_text(encoding='utf-8')
+
           if 'import android.graphics.drawable.GradientDrawable;' not in s:
               s=s.replace('import android.graphics.Color;','import android.graphics.Color;\nimport android.graphics.drawable.GradientDrawable;')
 
-          s=s.replace('private static final int BG = Color.rgb(7,16,24);','private static final int BG = Color.rgb(246,249,252);')
+          s=s.replace('private static final int BG = Color.rgb(7,16,24);','private static final int BG = Color.rgb(246,251,255);')
           s=s.replace('private static final int PANEL = Color.rgb(11,21,30);','private static final int PANEL = Color.rgb(255,255,255);')
           s=s.replace('private static final int FIELD = Color.rgb(10,20,28);','private static final int FIELD = Color.rgb(255,255,255);')
-          s=s.replace('private static final int TEXT = Color.rgb(244,247,251);','private static final int TEXT = Color.rgb(35,48,63);')
-          s=s.replace('private static final int MUTED = Color.rgb(154,171,186);','private static final int MUTED = Color.rgb(129,143,158);')
-          s=s.replace('private static final int BLUE = Color.rgb(13,125,245);','private static final int BLUE = Color.rgb(21,104,190);')
-          s=s.replace('private static final int GREEN = Color.rgb(0,200,83);','private static final int GREEN = Color.rgb(255,190,0);')
+          s=s.replace('private static final int TEXT = Color.rgb(244,247,251);','private static final int TEXT = Color.rgb(25,35,52);')
+          s=s.replace('private static final int MUTED = Color.rgb(154,171,186);','private static final int MUTED = Color.rgb(125,139,160);')
+          s=s.replace('private static final int BLUE = Color.rgb(13,125,245);','private static final int BLUE = Color.rgb(17,125,241);')
+          s=s.replace('private static final int GREEN = Color.rgb(0,200,83);','private static final int GREEN = Color.rgb(17,125,241);')
 
           def replace_method(src, signature, new_method):
               start=src.index(signature)
@@ -59,51 +65,75 @@ jobs:
           dp_sig='    private int dp(int value)'
           dp_start=s.index(dp_sig)
           dp_end=s.index('\n', s.index('}', dp_start))+1
-          helper='''    private int dp(int value) { return (int)(value * getResources().getDisplayMetrics().density + 0.5f); }\n\n    private GradientDrawable rounded(int color, int strokeColor, int radius) {\n        GradientDrawable g=new GradientDrawable(); g.setColor(color); g.setCornerRadius(dp(radius));\n        if(strokeColor!=Color.TRANSPARENT) g.setStroke(dp(1),strokeColor); return g;\n    }\n\n    private LinearLayout card(String labelText, View child) {\n        LinearLayout c=new LinearLayout(this); c.setOrientation(LinearLayout.VERTICAL); c.setPadding(dp(14),dp(9),dp(14),dp(9));\n        c.setBackground(rounded(Color.WHITE,Color.rgb(216,224,232),12));\n        if(labelText!=null && !labelText.isEmpty()){ TextView l=label(labelText); l.setTextColor(MUTED); l.setTextSize(12); c.addView(l,new LinearLayout.LayoutParams(-1,dp(20))); }\n        c.addView(child,new LinearLayout.LayoutParams(-1,dp(42))); return c;\n    }\n'''
+          helper='''    private int dp(int value) { return (int)(value * getResources().getDisplayMetrics().density + 0.5f); }\n\n    private GradientDrawable rounded(int color, int strokeColor, int radius) {\n        GradientDrawable g=new GradientDrawable(); g.setColor(color); g.setCornerRadius(dp(radius));\n        if(strokeColor!=Color.TRANSPARENT) g.setStroke(dp(1),strokeColor); return g;\n    }\n\n    private LinearLayout refCard(String labelText, View child) {\n        LinearLayout c=new LinearLayout(this); c.setOrientation(LinearLayout.VERTICAL); c.setPadding(dp(16),dp(8),dp(16),dp(8));\n        c.setBackground(rounded(Color.WHITE,Color.rgb(225,234,244),15));\n        c.setElevation(dp(3));\n        if(labelText!=null && !labelText.isEmpty()){ TextView l=label(labelText); l.setTextColor(MUTED); l.setTextSize(13); c.addView(l,new LinearLayout.LayoutParams(-1,dp(21))); }\n        c.addView(child,new LinearLayout.LayoutParams(-1,dp(40))); return c;\n    }\n\n    private TextView refValue(String value){\n        TextView t=label(value); t.setTextColor(TEXT); t.setTextSize(20); t.setTypeface(null,1); return t;\n    }\n'''
           s=s[:dp_start]+helper+s[dp_end:]
 
-          s=replace_method(s,'    private TextView label(String text)', '''    private TextView label(String text) {\n        TextView v=new TextView(this); v.setText(text); v.setTextColor(TEXT); v.setTextSize(14); v.setGravity(Gravity.RIGHT|Gravity.CENTER_VERTICAL); v.setPadding(0,0,0,0); return v;\n    }''')
-          s=replace_method(s,'    private EditText field(String hint)', '''    private EditText field(String hint) {\n        EditText e=new EditText(this); e.setHint(hint); e.setHintTextColor(MUTED); e.setTextColor(TEXT); e.setTextSize(16); e.setSingleLine(true);\n        e.setGravity(Gravity.RIGHT|Gravity.CENTER_VERTICAL); e.setBackgroundColor(Color.TRANSPARENT); e.setPadding(0,0,0,0); e.setLayoutParams(new LinearLayout.LayoutParams(-1,dp(42))); return e;\n    }''')
-          s=replace_method(s,'    private Button button(String text, int color)', '''    private Button button(String text, int color) {\n        Button b=new Button(this); b.setText(text); b.setTextColor(color==GREEN?Color.rgb(38,47,57):Color.WHITE); b.setTextSize(16); b.setAllCaps(false);\n        b.setBackground(rounded(color,Color.TRANSPARENT,12)); b.setMinHeight(dp(50)); return b;\n    }''')
-          s=replace_method(s,'    private LinearLayout section(String title)', '''    private LinearLayout section(String title) {\n        LinearLayout box=new LinearLayout(this); box.setOrientation(LinearLayout.VERTICAL); box.setPadding(dp(14),dp(12),dp(14),dp(14)); box.setBackground(rounded(Color.WHITE,Color.rgb(216,224,232),12));\n        TextView t=label(title); t.setTextSize(16); t.setTypeface(null,1); box.addView(t,new LinearLayout.LayoutParams(-1,-2)); return box;\n    }''')
+          s=replace_method(s,'    private TextView label(String text)', '''    private TextView label(String text) {\n        TextView v=new TextView(this); v.setText(text); v.setTextColor(TEXT); v.setTextSize(14); v.setGravity(Gravity.RIGHT|Gravity.CENTER_VERTICAL); v.setPadding(0,0,0,0); v.setTextDirection(View.TEXT_DIRECTION_RTL); return v;\n    }''')
 
-          s=replace_method(s,'    private void buildUi()', '''    private void buildUi() {\n        LinearLayout root=new LinearLayout(this); root.setOrientation(LinearLayout.VERTICAL); root.setBackgroundColor(BG); root.setLayoutDirection(View.LAYOUT_DIRECTION_RTL);\n\n        LinearLayout header=new LinearLayout(this); header.setOrientation(LinearLayout.HORIZONTAL); header.setGravity(Gravity.CENTER_VERTICAL); header.setPadding(dp(16),dp(10),dp(16),dp(10)); header.setBackground(rounded(BLUE,Color.TRANSPARENT,0));\n        ImageView train=new ImageView(this); train.setImageResource(R.drawable.ic_train); train.setColorFilter(Color.WHITE); train.setPadding(dp(6),dp(6),dp(6),dp(6));\n        LinearLayout titles=new LinearLayout(this); titles.setOrientation(LinearLayout.VERTICAL); titles.setGravity(Gravity.RIGHT|Gravity.CENTER_VERTICAL);\n        TextView title=label("MASOUD Raja Bot   V8"); title.setTextColor(Color.WHITE); title.setTextSize(20); title.setTypeface(null,1);\n        TextView sub=label("سفر آسان‌تر، با رجا"); sub.setTextColor(Color.rgb(224,237,250)); sub.setTextSize(13);\n        titles.addView(title,new LinearLayout.LayoutParams(-1,dp(30))); titles.addView(sub,new LinearLayout.LayoutParams(-1,dp(24)));\n        header.addView(titles,new LinearLayout.LayoutParams(0,dp(62),1)); header.addView(train,new LinearLayout.LayoutParams(dp(84),dp(62))); root.addView(header,new LinearLayout.LayoutParams(-1,dp(82)));\n\n        LinearLayout tabs=new LinearLayout(this); tabs.setOrientation(LinearLayout.HORIZONTAL); tabs.setPadding(dp(14),dp(8),dp(14),dp(8)); tabs.setBackgroundColor(Color.WHITE);\n        Button tabRun=button("یک طرفه",BLUE), tabPassengers=button("مسافران",Color.rgb(118,135,151)), tabBrowser=button("اکانت رجا",Color.rgb(118,135,151));\n        tabs.addView(tabRun,new LinearLayout.LayoutParams(0,dp(44),1)); tabs.addView(tabPassengers,new LinearLayout.LayoutParams(0,dp(44),1)); tabs.addView(tabBrowser,new LinearLayout.LayoutParams(0,dp(44),1)); root.addView(tabs,new LinearLayout.LayoutParams(-1,dp(60)));\n\n        FrameLayout body=new FrameLayout(this); root.addView(body,new LinearLayout.LayoutParams(-1,0,1));\n        runPanel=makeRunPanel(); passengerPanel=makePassengerPanel(); browserPanel=makeBrowserPanel(); body.addView(runPanel); body.addView(passengerPanel); body.addView(browserPanel);\n        tabRun.setOnClickListener(v->showPanel(runPanel)); tabPassengers.setOnClickListener(v->showPanel(passengerPanel)); tabBrowser.setOnClickListener(v->showPanel(browserPanel)); setContentView(root);\n    }''')
+          s=replace_method(s,'    private EditText field(String hint)', '''    private EditText field(String hint) {\n        EditText e=new EditText(this); e.setHint(hint); e.setHintTextColor(MUTED); e.setTextColor(TEXT); e.setTextSize(19); e.setSingleLine(true);\n        e.setGravity(Gravity.RIGHT|Gravity.CENTER_VERTICAL); e.setBackgroundColor(Color.TRANSPARENT); e.setPadding(0,0,0,0); e.setTextDirection(View.TEXT_DIRECTION_RTL); e.setLayoutParams(new LinearLayout.LayoutParams(-1,dp(40))); return e;\n    }''')
 
-          s=replace_method(s,'    private LinearLayout makeRunPanel()', '''    private LinearLayout makeRunPanel(){\n        ScrollView scroll=new ScrollView(this); LinearLayout p=new LinearLayout(this); p.setOrientation(LinearLayout.VERTICAL); p.setPadding(dp(16),dp(14),dp(16),dp(24)); p.setLayoutDirection(View.LAYOUT_DIRECTION_RTL); scroll.addView(p);\n\n        phone=field("شماره موبایل حساب رجا"); phone.setInputType(InputType.TYPE_CLASS_PHONE); p.addView(card("اکانت رجا",phone),new LinearLayout.LayoutParams(-1,dp(76))); gap(p,8);\n        password=field("رمز عبور"); password.setInputType(InputType.TYPE_CLASS_TEXT|InputType.TYPE_TEXT_VARIATION_PASSWORD); p.addView(card("",password),new LinearLayout.LayoutParams(-1,dp(62))); gap(p,12);\n\n        LinearLayout stations=new LinearLayout(this); stations.setOrientation(LinearLayout.VERTICAL); stations.setBackground(rounded(Color.WHITE,Color.rgb(216,224,232),12)); stations.setPadding(dp(14),dp(4),dp(14),dp(4));\n        origin=field("مبدا"); destination=field("مقصد"); stations.addView(origin,new LinearLayout.LayoutParams(-1,dp(48))); View line=new View(this); line.setBackgroundColor(Color.rgb(222,228,234)); stations.addView(line,new LinearLayout.LayoutParams(-1,dp(1))); stations.addView(destination,new LinearLayout.LayoutParams(-1,dp(48))); p.addView(stations,new LinearLayout.LayoutParams(-1,dp(105))); gap(p,12);\n\n        trainNumber=field("شماره قطار"); trainNumber.setInputType(InputType.TYPE_CLASS_NUMBER); p.addView(card("شماره قطار",trainNumber),new LinearLayout.LayoutParams(-1,dp(76))); gap(p,12);\n\n        priceMode=new CheckBox(this); priceMode.setText(""); priceMode.setButtonTintList(android.content.res.ColorStateList.valueOf(BLUE)); priceMode.setLayoutDirection(View.LAYOUT_DIRECTION_LTR); LinearLayout tickRow=new LinearLayout(this); tickRow.setGravity(Gravity.LEFT|Gravity.CENTER_VERTICAL); tickRow.addView(priceMode,new LinearLayout.LayoutParams(dp(48),dp(42))); p.addView(tickRow,new LinearLayout.LayoutParams(-1,dp(42)));\n        LinearLayout prices=new LinearLayout(this); prices.setOrientation(LinearLayout.HORIZONTAL); prices.setLayoutDirection(View.LAYOUT_DIRECTION_RTL); minPrice=field("از قیمت"); maxPrice=field("تا قیمت"); minPrice.setInputType(InputType.TYPE_CLASS_NUMBER); maxPrice.setInputType(InputType.TYPE_CLASS_NUMBER); prices.addView(card("از قیمت",minPrice),new LinearLayout.LayoutParams(0,dp(76),1)); Space sp=new Space(this); prices.addView(sp,new LinearLayout.LayoutParams(dp(10),1)); prices.addView(card("تا قیمت",maxPrice),new LinearLayout.LayoutParams(0,dp(76),1)); p.addView(prices,new LinearLayout.LayoutParams(-1,dp(76))); gap(p,12);\n\n        travelDate=field("تاریخ رفت"); p.addView(card("تاریخ رفت",travelDate),new LinearLayout.LayoutParams(-1,dp(76))); gap(p,12);\n        adults=field("تعداد مسافر"); adults.setInputType(InputType.TYPE_CLASS_NUMBER); adults.setText("1"); p.addView(card("مسافران",adults),new LinearLayout.LayoutParams(-1,dp(76))); gap(p,18);\n\n        children=field("0"); children.setInputType(InputType.TYPE_CLASS_NUMBER); children.setText("0"); children.setVisibility(View.GONE); p.addView(children,new LinearLayout.LayoutParams(1,1));\n        coupe=new CheckBox(this); coupe.setChecked(false); coupe.setVisibility(View.GONE); p.addView(coupe,new LinearLayout.LayoutParams(1,1));\n        alarm=new CheckBox(this); alarm.setChecked(true); alarm.setVisibility(View.GONE); p.addView(alarm,new LinearLayout.LayoutParams(1,1));\n        refresh=field("2"); refresh.setInputType(InputType.TYPE_CLASS_NUMBER|InputType.TYPE_NUMBER_FLAG_DECIMAL); refresh.setText("2"); refresh.setVisibility(View.GONE); p.addView(refresh,new LinearLayout.LayoutParams(1,1));\n        passengerCountLabel=label("مسافر ذخیره‌شده: 0"); passengerCountLabel.setVisibility(View.GONE); p.addView(passengerCountLabel,new LinearLayout.LayoutParams(1,1));\n\n        startBtn=button("اجرای ربات قطار",GREEN); stopBtn=button("توقف",RED); stopBtn.setEnabled(false); stopBtn.setVisibility(View.GONE); p.addView(startBtn,new LinearLayout.LayoutParams(-1,dp(58))); p.addView(stopBtn,new LinearLayout.LayoutParams(-1,dp(1)));\n        status=label("● آماده"); status.setVisibility(View.GONE); p.addView(status,new LinearLayout.LayoutParams(1,1)); logView=new TextView(this); logView.setVisibility(View.GONE); p.addView(logView,new LinearLayout.LayoutParams(1,1));\n\n        startBtn.setOnClickListener(v->startBot()); stopBtn.setOnClickListener(v->stopBot("توقف توسط کاربر"));\n        priceMode.setOnCheckedChangeListener((b,checked)->{ trainNumber.setEnabled(!checked); minPrice.setEnabled(checked); maxPrice.setEnabled(checked); }); minPrice.setEnabled(false); maxPrice.setEnabled(false);\n        LinearLayout container=new LinearLayout(this); container.setOrientation(LinearLayout.VERTICAL); container.addView(scroll,new LinearLayout.LayoutParams(-1,-1)); return container;\n    }''')
+          s=replace_method(s,'    private Button button(String text, int color)', '''    private Button button(String text, int color) {\n        Button b=new Button(this); b.setText(text); b.setTextColor(Color.WHITE); b.setTextSize(17); b.setAllCaps(false); b.setBackground(rounded(color,Color.TRANSPARENT,18)); b.setMinHeight(dp(52)); return b;\n    }''')
+
+          s=replace_method(s,'    private LinearLayout section(String title)', '''    private LinearLayout section(String title) {\n        LinearLayout box=new LinearLayout(this); box.setOrientation(LinearLayout.VERTICAL); box.setPadding(dp(14),dp(12),dp(14),dp(14)); box.setBackground(rounded(Color.WHITE,Color.rgb(222,231,241),15));\n        TextView t=label(title); t.setTextSize(17); t.setTypeface(null,1); box.addView(t,new LinearLayout.LayoutParams(-1,-2)); return box;\n    }''')
+
+          s=replace_method(s,'    private void buildUi()', '''    private void buildUi() {\n        LinearLayout root=new LinearLayout(this); root.setOrientation(LinearLayout.VERTICAL); root.setBackgroundColor(BG); root.setLayoutDirection(View.LAYOUT_DIRECTION_RTL);\n\n        ImageView hero=new ImageView(this); hero.setImageResource(R.drawable.header_reference); hero.setScaleType(ImageView.ScaleType.CENTER_CROP); hero.setAdjustViewBounds(false);\n        root.addView(hero,new LinearLayout.LayoutParams(-1,dp(190)));\n\n        LinearLayout tabs=new LinearLayout(this); tabs.setOrientation(LinearLayout.HORIZONTAL); tabs.setGravity(Gravity.CENTER); tabs.setPadding(dp(16),dp(7),dp(16),dp(7)); tabs.setBackgroundColor(Color.TRANSPARENT);\n        Button tabRun=button("یک طرفه",BLUE);\n        Button tabBrowser=button("اکانت رجا",Color.rgb(245,249,253)); tabBrowser.setTextColor(Color.rgb(42,55,73)); tabBrowser.setBackground(rounded(Color.rgb(248,251,255),Color.rgb(219,230,242),18));\n        tabs.addView(tabRun,new LinearLayout.LayoutParams(0,dp(52),1));\n        Space ts=new Space(this); tabs.addView(ts,new LinearLayout.LayoutParams(dp(8),1));\n        tabs.addView(tabBrowser,new LinearLayout.LayoutParams(0,dp(52),1));\n        root.addView(tabs,new LinearLayout.LayoutParams(-1,dp(68)));\n\n        FrameLayout body=new FrameLayout(this); root.addView(body,new LinearLayout.LayoutParams(-1,0,1));\n        runPanel=makeRunPanel(); passengerPanel=makePassengerPanel(); browserPanel=makeBrowserPanel();\n        body.addView(runPanel); body.addView(passengerPanel); body.addView(browserPanel);\n        tabRun.setOnClickListener(v->showPanel(runPanel));\n        tabBrowser.setOnClickListener(v->showPanel(browserPanel));\n        setContentView(root);\n    }''')
+
+          s=replace_method(s,'    private LinearLayout makeRunPanel()', '''    private LinearLayout makeRunPanel(){\n        ScrollView scroll=new ScrollView(this); scroll.setFillViewport(true);\n        LinearLayout p=new LinearLayout(this); p.setOrientation(LinearLayout.VERTICAL); p.setPadding(dp(18),dp(4),dp(18),dp(24)); p.setLayoutDirection(View.LAYOUT_DIRECTION_RTL); scroll.addView(p);\n\n        LinearLayout stations=new LinearLayout(this); stations.setOrientation(LinearLayout.VERTICAL); stations.setBackground(rounded(Color.WHITE,Color.rgb(225,234,244),15)); stations.setElevation(dp(3)); stations.setPadding(dp(16),dp(7),dp(16),dp(7));\n        origin=field("اصفهان"); destination=field("مشهد");\n        LinearLayout oWrap=new LinearLayout(this); oWrap.setOrientation(LinearLayout.VERTICAL); TextView ol=label("مبدا"); ol.setTextColor(MUTED); ol.setTextSize(13); oWrap.addView(ol,new LinearLayout.LayoutParams(-1,dp(20))); oWrap.addView(origin,new LinearLayout.LayoutParams(-1,dp(38)));\n        LinearLayout dWrap=new LinearLayout(this); dWrap.setOrientation(LinearLayout.VERTICAL); TextView dl=label("مقصد"); dl.setTextColor(MUTED); dl.setTextSize(13); dWrap.addView(dl,new LinearLayout.LayoutParams(-1,dp(20))); dWrap.addView(destination,new LinearLayout.LayoutParams(-1,dp(38)));\n        stations.addView(oWrap,new LinearLayout.LayoutParams(-1,dp(60))); View line=new View(this); line.setBackgroundColor(Color.rgb(228,235,242)); stations.addView(line,new LinearLayout.LayoutParams(-1,dp(1))); stations.addView(dWrap,new LinearLayout.LayoutParams(-1,dp(60))); p.addView(stations,new LinearLayout.LayoutParams(-1,dp(121))); gap(p,10);\n\n        trainNumber=field("همه"); trainNumber.setInputType(InputType.TYPE_CLASS_NUMBER); p.addView(refCard("شماره قطار",trainNumber),new LinearLayout.LayoutParams(-1,dp(76)));\n\n        priceMode=new CheckBox(this); priceMode.setText(""); priceMode.setButtonTintList(android.content.res.ColorStateList.valueOf(BLUE)); priceMode.setLayoutDirection(View.LAYOUT_DIRECTION_LTR);\n        LinearLayout tickRow=new LinearLayout(this); tickRow.setGravity(Gravity.LEFT|Gravity.CENTER_VERTICAL); tickRow.addView(priceMode,new LinearLayout.LayoutParams(dp(44),dp(38))); p.addView(tickRow,new LinearLayout.LayoutParams(-1,dp(38)));\n\n        minPrice=field("همه"); maxPrice=field("همه"); minPrice.setInputType(InputType.TYPE_CLASS_NUMBER); maxPrice.setInputType(InputType.TYPE_CLASS_NUMBER);\n        p.addView(refCard("از قیمت",minPrice),new LinearLayout.LayoutParams(-1,dp(76))); gap(p,10);\n        p.addView(refCard("تا قیمت",maxPrice),new LinearLayout.LayoutParams(-1,dp(76))); gap(p,10);\n\n        travelDate=field("تاریخ حرکت"); p.addView(refCard("تاریخ حرکت",travelDate),new LinearLayout.LayoutParams(-1,dp(76))); gap(p,10);\n\n        adults=field("1"); adults.setInputType(InputType.TYPE_CLASS_NUMBER); adults.setText("1"); adults.setVisibility(View.GONE); p.addView(adults,new LinearLayout.LayoutParams(1,1));\n        children=field("0"); children.setInputType(InputType.TYPE_CLASS_NUMBER); children.setText("0"); children.setVisibility(View.GONE); p.addView(children,new LinearLayout.LayoutParams(1,1));\n        TextView passengerDisplay=refValue("1 مسافر"); LinearLayout passengerCard=refCard("مسافران",passengerDisplay); passengerCard.setOnClickListener(v->showPanel(passengerPanel)); passengerDisplay.setOnClickListener(v->showPanel(passengerPanel)); p.addView(passengerCard,new LinearLayout.LayoutParams(-1,dp(80))); gap(p,16);\n\n        coupe=new CheckBox(this); coupe.setChecked(false); coupe.setVisibility(View.GONE); p.addView(coupe,new LinearLayout.LayoutParams(1,1));\n        alarm=new CheckBox(this); alarm.setChecked(true); alarm.setVisibility(View.GONE); p.addView(alarm,new LinearLayout.LayoutParams(1,1));\n        refresh=field("2"); refresh.setInputType(InputType.TYPE_CLASS_NUMBER|InputType.TYPE_NUMBER_FLAG_DECIMAL); refresh.setText("2"); refresh.setVisibility(View.GONE); p.addView(refresh,new LinearLayout.LayoutParams(1,1));\n        passengerCountLabel=label("1 مسافر"); passengerCountLabel.setVisibility(View.GONE); p.addView(passengerCountLabel,new LinearLayout.LayoutParams(1,1));\n\n        startBtn=button("⌕  اجرای ربات قطار",BLUE); stopBtn=button("توقف",RED); stopBtn.setEnabled(false); stopBtn.setVisibility(View.GONE); p.addView(startBtn,new LinearLayout.LayoutParams(-1,dp(58))); p.addView(stopBtn,new LinearLayout.LayoutParams(-1,dp(1)));\n        status=label("● آماده"); status.setVisibility(View.GONE); p.addView(status,new LinearLayout.LayoutParams(1,1));\n        logView=new TextView(this); logView.setVisibility(View.GONE); p.addView(logView,new LinearLayout.LayoutParams(1,1));\n\n        startBtn.setOnClickListener(v->startBot()); stopBtn.setOnClickListener(v->stopBot("توقف توسط کاربر"));\n        priceMode.setOnCheckedChangeListener((b,checked)->{ trainNumber.setEnabled(!checked); minPrice.setEnabled(checked); maxPrice.setEnabled(checked); });\n        minPrice.setEnabled(false); maxPrice.setEnabled(false);\n        LinearLayout container=new LinearLayout(this); container.setOrientation(LinearLayout.VERTICAL); container.addView(scroll,new LinearLayout.LayoutParams(-1,-1)); return container;\n    }''')
+
+          s=replace_method(s,'    private LinearLayout makeBrowserPanel()', '''    private LinearLayout makeBrowserPanel(){\n        LinearLayout p=new LinearLayout(this); p.setOrientation(LinearLayout.VERTICAL); p.setPadding(dp(18),dp(12),dp(18),dp(18)); p.setBackgroundColor(BG);\n        TextView t=label("اکانت رجا"); t.setTextSize(20); t.setTypeface(null,1); p.addView(t,new LinearLayout.LayoutParams(-1,dp(42)));\n        phone=field("شماره موبایل حساب رجا"); phone.setInputType(InputType.TYPE_CLASS_PHONE); p.addView(refCard("شماره موبایل",phone),new LinearLayout.LayoutParams(-1,dp(78))); gap(p,10);\n        password=field("رمز عبور"); password.setInputType(InputType.TYPE_CLASS_TEXT|InputType.TYPE_TEXT_VARIATION_PASSWORD); p.addView(refCard("رمز عبور",password),new LinearLayout.LayoutParams(-1,dp(78))); gap(p,12);\n        Button save=button("ذخیره اکانت",BLUE); save.setOnClickListener(v->{ saveAccount(); toast("اکانت ذخیره شد"); }); p.addView(save,new LinearLayout.LayoutParams(-1,dp(54)));\n        webView=new WebView(this); webView.setVisibility(View.GONE); p.addView(webView,new LinearLayout.LayoutParams(1,1)); return p;\n    }''')
 
           p.write_text(s,encoding='utf-8')
 
           app=Path('buildsrc/MASOUD_Android')
           manifest=app/'app/src/main/AndroidManifest.xml'
-          m=manifest.read_text(encoding='utf-8').replace('android:label="MASOUD"','android:label="MASOUD Raja Bot V8"')
-          if 'android:icon=' not in m: m=m.replace('<application ','<application android:icon="@drawable/ic_train" android:roundIcon="@drawable/ic_train" ',1)
+          m=manifest.read_text(encoding='utf-8').replace('android:label="MASOUD"','android:label="MASOUD Raja V8"')
+          if 'android:icon=' not in m:
+              m=m.replace('<application ','<application android:icon="@drawable/ic_train" android:roundIcon="@drawable/ic_train" ',1)
           manifest.write_text(m,encoding='utf-8')
-          gradle=app/'app/build.gradle'; g=gradle.read_text(encoding='utf-8'); g=re.sub(r'versionCode\s+\d+','versionCode 8',g); g=re.sub(r"versionName\s+'[^']+'","versionName '8.0.0'",g); gradle.write_text(g,encoding='utf-8')
+
+          styles=app/'app/src/main/res/values/styles.xml'
+          st=styles.read_text(encoding='utf-8').replace('<item name="android:windowLightStatusBar">false</item>','<item name="android:windowLightStatusBar">true</item>').replace('#071018','#F6FBFF')
+          styles.write_text(st,encoding='utf-8')
+
+          gradle=app/'app/build.gradle'
+          g=gradle.read_text(encoding='utf-8')
+          g=re.sub(r'versionCode\s+\d+','versionCode 8',g)
+          g=re.sub(r"versionName\s+'[^']+'","versionName '8.0.0'",g)
+          gradle.write_text(g,encoding='utf-8')
           PY
-      - name: Verify V8 source
+
+      - name: Verify exact reference elements and V1 automation logic
         run: |
           MAIN=buildsrc/MASOUD_Android/app/src/main/java/com/masoud/raja/MainActivity.java
-          grep -q 'MASOUD Raja Bot   V8' "$MAIN"
-          grep -q 'اجرای ربات قطار' "$MAIN"
+          test -s buildsrc/MASOUD_Android/app/src/main/res/drawable-nodpi/header_reference.jpg
+          grep -q 'R.drawable.header_reference' "$MAIN"
+          grep -q 'یک طرفه' "$MAIN"
+          grep -q 'اکانت رجا' "$MAIN"
           grep -q 'شماره قطار' "$MAIN"
           grep -q 'از قیمت' "$MAIN"
           grep -q 'تا قیمت' "$MAIN"
+          grep -q 'تاریخ حرکت' "$MAIN"
+          grep -q '1 مسافر' "$MAIN"
+          grep -q 'اجرای ربات قطار' "$MAIN"
           grep -q 'injectLogin' "$MAIN"
           grep -q 'injectSearchForm' "$MAIN"
           grep -q 'inspectResultsAndReserve' "$MAIN"
+
       - name: Build APK
         run: |
           cd buildsrc/MASOUD_Android
           gradle assembleDebug --stacktrace
+
       - name: Verify and collect APK
         run: |
           APK=$(find buildsrc/MASOUD_Android/app/build/outputs/apk -type f -name '*.apk' | head -1)
           test -s "$APK"
           unzip -t "$APK" >/dev/null
-          cp "$APK" output/MASOUD_Raja_V8_Reference_UI.apk
-          sha256sum output/MASOUD_Raja_V8_Reference_UI.apk
+          cp "$APK" output/MASOUD_Raja_V8_Exact_Reference.apk
+          sha256sum output/MASOUD_Raja_V8_Exact_Reference.apk
+
       - uses: actions/upload-artifact@v4
         with:
-          name: MASOUD-Raja-V8-Reference-APK
-          path: output/MASOUD_Raja_V8_Reference_UI.apk
+          name: MASOUD-Raja-V8-Exact-Reference-APK
+          path: output/MASOUD_Raja_V8_Exact_Reference.apk
           if-no-files-found: error
