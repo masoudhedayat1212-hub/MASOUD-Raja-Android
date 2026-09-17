@@ -38,8 +38,9 @@ jobs:
           Path('buildsrc/MASOUD_Android/app/src/main/res/drawable-nodpi/header_reference_v3.jpg').write_bytes(base64.b64decode(s))
           g=Path('buildsrc/MASOUD_Android/app/build.gradle')
           t=g.read_text(encoding='utf-8')
-          t=re.sub(r'versionCode\s+\d+','versionCode 3',t)
-          t=re.sub(r'versionName\s+"[^"]+"','versionName "3.0"',t)
+          t=re.sub(r'applicationId\s+"[^"]+"','applicationId "com.masoud.raja.v3ref"',t)
+          t=re.sub(r'versionCode\s+\d+','versionCode 9',t)
+          t=re.sub(r'versionName\s+"[^"]+"','versionName "3.0-ref"',t)
           g.write_text(t,encoding='utf-8')
           PY
           python3 v3/reference_theme_patch.py
@@ -56,7 +57,8 @@ jobs:
           grep -q 'اکانت رجا' "$MAIN"
           grep -q 'اجرای ربات قطار' "$MAIN"
           grep -q 'private void startBot()' "$MAIN"
-          grep -q 'versionCode 3' buildsrc/MASOUD_Android/app/build.gradle
+          grep -q 'applicationId "com.masoud.raja.v3ref"' buildsrc/MASOUD_Android/app/build.gradle
+          grep -q 'versionCode 9' buildsrc/MASOUD_Android/app/build.gradle
 
       - name: Build APK
         shell: bash
@@ -74,11 +76,11 @@ jobs:
           unzip -t "$APK" >/dev/null
           sha256sum "$APK"
           mkdir -p "$GITHUB_WORKSPACE/output"
-          cp "$APK" "$GITHUB_WORKSPACE/output/MASOUD_Raja_V3_REFERENCE_THEME.apk"
+          cp "$APK" "$GITHUB_WORKSPACE/output/MASOUD_Raja_V3_REFERENCE_THEME_INSTALLABLE.apk"
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: MASOUD-Raja-V3-REFERENCE-THEME
-          path: output/MASOUD_Raja_V3_REFERENCE_THEME.apk
+          name: MASOUD-Raja-V3-REFERENCE-THEME-INSTALLABLE
+          path: output/MASOUD_Raja_V3_REFERENCE_THEME_INSTALLABLE.apk
           if-no-files-found: error
