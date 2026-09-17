@@ -18,50 +18,40 @@ jobs:
           distribution: temurin
           java-version: '17'
 
-      - name: Prepare V7 UI
+      - name: Prepare V8 from Raja login-capable lineage
         shell: bash
         run: |
           set -euo pipefail
-          rm -rf buildsrc
-          mkdir -p buildsrc
-          unzip -q MASOUD_Android_v1.zip -d buildsrc
+          rm -rf buildsrc output
+          mkdir -p buildsrc output
+          unzip -q MASOUD_Android_v5.zip -d buildsrc
           APP=buildsrc/MASOUD_Android
-          MAIN="$APP/app/src/main/java/com/masoud/raja/MainActivity.java"
-          cp v7/MainActivity.java "$MAIN"
-          mkdir -p "$APP/app/src/main/res/drawable"
+          mkdir -p "$APP/app/src/main/res/drawable" "$APP/app/src/main/res/drawable-nodpi"
           cp v5/ic_train.xml "$APP/app/src/main/res/drawable/ic_train.xml"
-          python3 - <<'PY'
-          from pathlib import Path
-          import re
-          app=Path('buildsrc/MASOUD_Android')
-          manifest=app/'app/src/main/AndroidManifest.xml'
-          m=manifest.read_text(encoding='utf-8')
-          m=m.replace('android:label="MASOUD"','android:label="MASOUD Raja"')
-          if 'android:icon=' not in m:
-              m=m.replace('<application ','<application android:icon="@drawable/ic_train" android:roundIcon="@drawable/ic_train" ',1)
-          manifest.write_text(m,encoding='utf-8')
-          gradle=app/'app/build.gradle'
-          g=gradle.read_text(encoding='utf-8')
-          g=re.sub(r'versionCode\s+\d+','versionCode 7',g)
-          g=re.sub(r"versionName\s+'[^']+'","versionName '7.0.0'",g)
-          gradle.write_text(g,encoding='utf-8')
-          PY
+          python3 v6/patch.py
+          base64 -d v8/header_reference.b64 > "$APP/app/src/main/res/drawable-nodpi/header_reference.jpg"
+          python3 v8/patch_v8.py
 
-      - name: Verify V7 UI
+      - name: Verify V8 UI and Raja login logic
         shell: bash
         run: |
           set -euo pipefail
           MAIN=buildsrc/MASOUD_Android/app/src/main/java/com/masoud/raja/MainActivity.java
-          grep -q 'private static final String VERSION = "V7"' "$MAIN"
-          grep -q 'مبدا (شهر)' "$MAIN"
-          grep -q 'مقصد (شهر)' "$MAIN"
-          grep -q 'تاریخ رفت' "$MAIN"
-          grep -q 'بزرگسال' "$MAIN"
-          grep -q 'کودک' "$MAIN"
-          grep -q 'نوزاد' "$MAIN"
-          grep -q 'جستجوی قطار' "$MAIN"
-          ! grep -q 'مسافر ذخیره‌شده' "$MAIN"
-          grep -q 'versionCode 7' buildsrc/MASOUD_Android/app/build.gradle
+          test -s buildsrc/MASOUD_Android/app/src/main/res/drawable-nodpi/header_reference.jpg
+          grep -q 'private static final String VERSION = "V8"' "$MAIN"
+          grep -q 'R.drawable.header_reference' "$MAIN"
+          grep -q 'یک طرفه' "$MAIN"
+          grep -q 'اکانت رجا' "$MAIN"
+          grep -q 'شماره قطار' "$MAIN"
+          grep -q 'از قیمت' "$MAIN"
+          grep -q 'تا قیمت' "$MAIN"
+          grep -q 'تاریخ حرکت' "$MAIN"
+          grep -q '1 مسافر' "$MAIN"
+          grep -q 'اجرای ربات قطار' "$MAIN"
+          grep -q 'private void injectLoginFixed()' "$MAIN"
+          grep -q 'injectLoginFixed();' "$MAIN"
+          grep -q 'LOGIN_FALLBACK_CLICKED' "$MAIN"
+          grep -q 'versionCode 8' buildsrc/MASOUD_Android/app/build.gradle
 
       - name: Build APK
         shell: bash
@@ -78,12 +68,11 @@ jobs:
           test -s "$APK"
           unzip -t "$APK" >/dev/null
           sha256sum "$APK"
-          mkdir -p "$GITHUB_WORKSPACE/output"
-          cp "$APK" "$GITHUB_WORKSPACE/output/MASOUD_Raja_Android_V7_UI.apk"
+          cp "$APK" output/MASOUD_Raja_V8.apk
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: MASOUD-Raja-Android-V7-UI-APK
-          path: output/MASOUD_Raja_Android_V7_UI.apk
+          name: MASOUD-Raja-V8
+          path: output/MASOUD_Raja_V8.apk
           if-no-files-found: error
