@@ -27,13 +27,24 @@ jobs:
           unzip -q MASOUD_Android_v1.zip -d buildsrc
           APP=buildsrc/MASOUD_Android
           MAIN="$APP/app/src/main/java/com/masoud/raja/MainActivity.java"
-          base64 -d v5/MainActivity.java.gz.b64 | gzip -d > "$MAIN"
           mkdir -p "$APP/app/src/main/res/drawable" "$APP/app/src/main/res/drawable-nodpi"
-          base64 -d v5/train_banner.b64 > "$APP/app/src/main/res/drawable-nodpi/train_banner.jpg"
+          python3 - <<'PY'
+          from pathlib import Path
+          import base64,gzip,re
+          def dec(path):
+              s=Path(path).read_text(encoding='utf-8')
+              s=re.sub(r'[^A-Za-z0-9+/=]','',s)
+              s += '='*((4-len(s)%4)%4)
+              return base64.b64decode(s,validate=False)
+          Path('buildsrc/MASOUD_Android/app/src/main/java/com/masoud/raja/MainActivity.java').write_bytes(gzip.decompress(dec('v5/MainActivity.java.gz.b64')))
+          Path('buildsrc/MASOUD_Android/app/src/main/res/drawable-nodpi/train_banner.jpg').write_bytes(dec('v5/train_banner.b64'))
+          chunks=''.join(Path(f'v8/header_chunks/{i}.txt').read_text(encoding='utf-8') for i in range(6))
+          chunks=re.sub(r'[^A-Za-z0-9+/=]','',chunks)
+          chunks += '='*((4-len(chunks)%4)%4)
+          Path('buildsrc/MASOUD_Android/app/src/main/res/drawable-nodpi/header_reference.jpg').write_bytes(base64.b64decode(chunks,validate=False))
+          PY
           cp v5/ic_train.xml "$APP/app/src/main/res/drawable/ic_train.xml"
           python3 v6/patch.py
-          cat v8/header_chunks/0.txt v8/header_chunks/1.txt v8/header_chunks/2.txt v8/header_chunks/3.txt v8/header_chunks/4.txt v8/header_chunks/5.txt > /tmp/header_reference.b64
-          base64 -d /tmp/header_reference.b64 > "$APP/app/src/main/res/drawable-nodpi/header_reference.jpg"
           python3 v8/patch_v8.py
 
       - name: Verify V8 UI and Raja login logic
@@ -73,7 +84,8 @@ jobs:
           test -s "$APK"
           unzip -t "$APK" >/dev/null
           sha256sum "$APK"
-          cp "$APK" output/MASOUD_Raja_V8.apk
+          mkdir -p "$GITHUB_WORKSPACE/output"
+          cp "$APK" "$GITHUB_WORKSPACE/output/MASOUD_Raja_V8.apk"
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
