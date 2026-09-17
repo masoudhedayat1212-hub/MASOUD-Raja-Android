@@ -1,0 +1,59 @@
+name: V3 Base Build
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - '.github/workflows/v3-base.yml'
+      - 'v3/MainActivity.java'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Prepare base V3
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf buildsrc output
+          mkdir -p buildsrc output
+          unzip -q MASOUD_Android_v1.zip -d buildsrc
+          APP=buildsrc/MASOUD_Android
+          MAIN="$APP/app/src/main/java/com/masoud/raja/MainActivity.java"
+          cp v3/MainActivity.java "$MAIN"
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('buildsrc/MASOUD_Android/app/build.gradle')
+          t=p.read_text(encoding='utf-8')
+          t=t.replace("applicationId 'com.masoud.raja'","applicationId 'com.masoud.raja.v3base'")
+          t=t.replace('applicationId "com.masoud.raja"','applicationId "com.masoud.raja.v3base"')
+          t=t.replace('versionCode 1','versionCode 30')
+          t=t.replace("versionName '1.0.0'","versionName '3.0-base'")
+          t=t.replace('versionName "1.0.0"','versionName "3.0-base"')
+          p.write_text(t,encoding='utf-8')
+          PY
+      - name: Build APK
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd buildsrc/MASOUD_Android
+          gradle assembleDebug --stacktrace
+      - name: Verify APK
+        shell: bash
+        run: |
+          set -euo pipefail
+          APK=$(find buildsrc/MASOUD_Android/app/build/outputs/apk -type f -name '*.apk' | head -1)
+          test -s "$APK"
+          unzip -t "$APK" >/dev/null
+          mkdir -p output
+          cp "$APK" output/MASOUD_Raja_V3_BASE.apk
+      - uses: actions/upload-artifact@v4
+        with:
+          name: MASOUD-Raja-V3-BASE
+          path: buildsrc/MASOUD_Android/output/MASOUD_Raja_V3_BASE.apk
+          if-no-files-found: error
