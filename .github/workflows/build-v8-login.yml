@@ -1,0 +1,72 @@
+name: Build V8 Raja Login
+on:
+  push:
+    paths:
+      - '.github/workflows/build-v8-login.yml'
+      - 'v8/patch_v8.py'
+      - 'v8/header_reference.b64'
+      - 'v6/patch.py'
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Prepare V8 from login-capable V6 lineage
+        run: |
+          set -euo pipefail
+          rm -rf buildsrc output
+          mkdir -p buildsrc output
+          unzip -q MASOUD_Android_v5.zip -d buildsrc
+          mkdir -p buildsrc/MASOUD_Android/app/src/main/res/drawable buildsrc/MASOUD_Android/app/src/main/res/drawable-nodpi
+          cp v5/ic_train.xml buildsrc/MASOUD_Android/app/src/main/res/drawable/ic_train.xml
+          python3 v6/patch.py
+          base64 -d v8/header_reference.b64 > buildsrc/MASOUD_Android/app/src/main/res/drawable-nodpi/header_reference.jpg
+          python3 v8/patch_v8.py
+
+      - name: Verify UI and Raja login logic
+        run: |
+          set -euo pipefail
+          MAIN=buildsrc/MASOUD_Android/app/src/main/java/com/masoud/raja/MainActivity.java
+          test -s buildsrc/MASOUD_Android/app/src/main/res/drawable-nodpi/header_reference.jpg
+          grep -q 'private static final String VERSION = "V8"' "$MAIN"
+          grep -q 'R.drawable.header_reference' "$MAIN"
+          grep -q 'یک طرفه' "$MAIN"
+          grep -q 'اکانت رجا' "$MAIN"
+          grep -q 'شماره قطار' "$MAIN"
+          grep -q 'از قیمت' "$MAIN"
+          grep -q 'تا قیمت' "$MAIN"
+          grep -q 'تاریخ حرکت' "$MAIN"
+          grep -q '1 مسافر' "$MAIN"
+          grep -q 'اجرای ربات قطار' "$MAIN"
+          grep -q 'private void injectLoginFixed()' "$MAIN"
+          grep -q 'injectLoginFixed();' "$MAIN"
+          grep -q 'LOGIN_FALLBACK_CLICKED' "$MAIN"
+
+      - name: Build debug APK
+        run: |
+          set -euo pipefail
+          cd buildsrc/MASOUD_Android
+          chmod +x gradlew
+          ./gradlew assembleDebug --no-daemon
+
+      - name: Collect APK
+        run: |
+          set -euo pipefail
+          APK=buildsrc/MASOUD_Android/app/build/outputs/apk/debug/app-debug.apk
+          test -s "$APK"
+          cp "$APK" output/MASOUD_Raja_V8.apk
+          ls -lh output/MASOUD_Raja_V8.apk
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: MASOUD-Raja-V8
+          path: output/MASOUD_Raja_V8.apk
+          if-no-files-found: error
