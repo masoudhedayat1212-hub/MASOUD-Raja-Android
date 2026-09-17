@@ -11,14 +11,12 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-
       - name: Set up JDK 17
         uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: '17'
-
-      - name: Rebuild V6 from V5 source
+      - name: Prepare V6
         shell: bash
         run: |
           set -euo pipefail
@@ -30,54 +28,9 @@ jobs:
           base64 -d v5/MainActivity.java.gz.b64 | gzip -d > "$MAIN"
           mkdir -p "$APP/app/src/main/res/drawable-nodpi" "$APP/app/src/main/res/drawable"
           base64 -d v5/train_banner.b64 > "$APP/app/src/main/res/drawable-nodpi/train_banner.jpg"
-          cat > "$APP/app/src/main/res/drawable/ic_train.xml" <<'XML'
-          <vector xmlns:android="http://schemas.android.com/apk/res/android" android:width="108dp" android:height="108dp" android:viewportWidth="108" android:viewportHeight="108">
-            <path android:fillColor="#0B151E" android:pathData="M0,0h108v108h-108z"/>
-            <path android:fillColor="#F4F7FB" android:pathData="M30,18c-7,0 -12,5 -12,12v42c0,8 6,14 14,14l-7,8v4h10l9,-10h20l9,10h10v-4l-7,-8c8,0 14,-6 14,-14V30c0,-7 -5,-12 -12,-12H30zM30,28h48v22H30V28zM31,60a7,7 0,1 1,0 14a7,7 0,0 1,0 -14zM77,60a7,7 0,1 1,0 14a7,7 0,0 1,0 -14z"/>
-            <path android:fillColor="#0D7DF5" android:pathData="M38,34h32v10H38z"/>
-          </vector>
-          XML
-          python3 - <<'PY'
-          from pathlib import Path
-          import re
-          p=Path('buildsrc/MASOUD_Android/app/src/main/java/com/masoud/raja/MainActivity.java')
-          s=p.read_text(encoding='utf-8')
-          s=s.replace('private static final String VERSION = "V5"','private static final String VERSION = "V6"')
-          marker='    private void injectSearchForm()'
-          if marker not in s: raise SystemExit('injectSearchForm marker missing')
-          # Keep the proven V5 login injection, then add a Raja-visible-login fallback only.
-          fixed=r'''    private void injectLoginFixed(){
-              injectLogin();
-              handler.postDelayed(()->web.evaluateJavascript("(function(){try{var vis=function(e){if(!e)return false;var r=e.getBoundingClientRect(),st=getComputedStyle(e);return r.width>0&&r.height>0&&st.display!='none'&&st.visibility!='hidden';};var els=[].slice.call(document.querySelectorAll('button,a,[role=button]'));var b=els.find(function(e){var t=(e.innerText||e.textContent||'').replace(/\\s+/g,' ').trim();return vis(e)&&(t==='ورود'||t.indexOf('ورود به حساب')>=0||t.indexOf('ورود / ثبت نام')>=0||t.indexOf('ورود/ثبت نام')>=0);});if(b){b.click();return 'LOGIN_FALLBACK_CLICKED';}return 'LOGIN_BUTTON_NOT_FOUND';}catch(e){return 'LOGIN_FALLBACK_ERROR:'+e.message;}})();",null),900);
-          }
-
-'''
-          s=s.replace(marker,fixed+marker,1)
-          # Change only the automation call site, not the original method body.
-          idx=s.find('private void injectLogin()')
-          if idx<0: raise SystemExit('injectLogin missing')
-          before=s[:idx]
-          after=s[idx:]
-          # The call site is before the method definition in this source.
-          if 'injectLogin();' not in before: raise SystemExit('injectLogin call site missing')
-          before=before.replace('injectLogin();','injectLoginFixed();')
-          s=before+after
-          p.write_text(s,encoding='utf-8')
-
-          manifest=Path('buildsrc/MASOUD_Android/app/src/main/AndroidManifest.xml')
-          m=manifest.read_text(encoding='utf-8')
-          m=m.replace('android:label="MASOUD"','android:label="MASOUD Raja"')
-          if 'android:icon=' not in m:
-              m=m.replace('<application ','<application android:icon="@drawable/ic_train" android:roundIcon="@drawable/ic_train" ',1)
-          manifest.write_text(m,encoding='utf-8')
-          gradle=Path('buildsrc/MASOUD_Android/app/build.gradle')
-          g=gradle.read_text(encoding='utf-8')
-          g=re.sub(r'versionCode\s+\d+','versionCode 6',g)
-          g=re.sub(r"versionName\s+'[^']+'","versionName '6.0.0'",g)
-          gradle.write_text(g,encoding='utf-8')
-          PY
-
-      - name: Verify login-only patch
+          cp v5/ic_train.xml "$APP/app/src/main/res/drawable/ic_train.xml"
+          python3 v6/patch.py
+      - name: Verify V6
         shell: bash
         run: |
           set -euo pipefail
@@ -87,34 +40,23 @@ jobs:
           grep -q 'LOGIN_FALLBACK_CLICKED' "$MAIN"
           grep -q 'injectLoginFixed();' "$MAIN"
           grep -q 'تاریخ رفت واقعاً ثبت شد' "$MAIN"
-          grep -q 'REFRESH_PRESETS = {"1","2","3","4","5","6","7","8","9","10"}' "$MAIN"
           grep -q 'versionCode 6' buildsrc/MASOUD_Android/app/build.gradle
-
       - name: Build APK
         shell: bash
         run: |
           set -euo pipefail
           cd buildsrc/MASOUD_Android
           gradle assembleDebug --stacktrace
-
       - name: Verify APK
         shell: bash
         run: |
           set -euo pipefail
           APK=$(find buildsrc/MASOUD_Android/app/build/outputs/apk -type f -name '*.apk' | head -1)
-          test -n "$APK"
           test -s "$APK"
           unzip -t "$APK" >/dev/null
           sha256sum "$APK"
-
-      - name: Collect APK
-        shell: bash
-        run: |
-          set -euo pipefail
-          mkdir -p output
-          APK=$(find buildsrc/MASOUD_Android/app/build/outputs/apk -type f -name '*.apk' | head -1)
-          cp "$APK" output/MASOUD_Raja_Android_V6.apk
-
+          mkdir -p "$GITHUB_WORKSPACE/output"
+          cp "$APK" "$GITHUB_WORKSPACE/output/MASOUD_Raja_Android_V6.apk"
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
