@@ -1,0 +1,52 @@
+    private LinearLayout homePanel, passengerPanel, browserPanel, settingsPanel, logsPanel, passengerList;
+    private Button startBtn, stopBtn, navHome, navPassengers, navSettings, navLogs;
+    private final List<Passenger> passengers = new ArrayList<>();
+    private boolean running = false, loggedIn = false, searchSubmitted = false, reserved = false, alarmPlayed = false;
+    private long nextRefreshAt = 0L;
+    private Runnable monitorRunnable;
+
+    @Override public void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+        getWindow().setStatusBarColor(BG);
+        getWindow().setNavigationBarColor(BG);
+        getWindow().getDecorView().setSystemUiVisibility(0);
+        buildUi();
+        setupWebView();
+        loadAccount();
+        showPanel(homePanel);
+    }
+
+    private int dp(int value){ return (int)(value*getResources().getDisplayMetrics().density+0.5f); }
+    private GradientDrawable bg(int color,int radius,int strokeColor,int stroke){ GradientDrawable d=new GradientDrawable(); d.setColor(color); d.setCornerRadius(dp(radius)); if(stroke>0)d.setStroke(dp(stroke),strokeColor); return d; }
+    private TextView label(String text){ TextView v=new TextView(this); v.setText(text); v.setTextColor(TEXT); v.setTextSize(14); v.setGravity(Gravity.RIGHT|Gravity.CENTER_VERTICAL); v.setPadding(dp(4),dp(5),dp(4),dp(4)); return v; }
+    private EditText field(String hint){ EditText e=new EditText(this); e.setHint(hint); e.setHintTextColor(MUTED); e.setTextColor(TEXT); e.setTextSize(16); e.setSingleLine(true); e.setGravity(Gravity.RIGHT|Gravity.CENTER_VERTICAL); e.setBackground(bg(FIELD,14,BORDER,1)); e.setPadding(dp(13),dp(8),dp(13),dp(8)); return e; }
+    private AutoCompleteTextView stationField(String hint){
+        AutoCompleteTextView e=new AutoCompleteTextView(this); e.setHint(hint); e.setHintTextColor(MUTED); e.setTextColor(TEXT); e.setTextSize(16); e.setSingleLine(true); e.setGravity(Gravity.RIGHT|Gravity.CENTER_VERTICAL); e.setBackground(bg(FIELD,14,BORDER,1)); e.setPadding(dp(13),dp(8),dp(13),dp(8)); e.setThreshold(0);
+        String[] cities={"تهران","مشهد","قم","اصفهان","شیراز","تبریز","اهواز","کرمان","یزد","رشت","ساری","کرج","قزوین","اراک","بندرعباس","زنجان","همدان","گرگان","شاهرود","نیشابور","سبزوار","طبس","کاشان","اندیمشک","خرمشهر"};
+        ArrayAdapter<String> a=new ArrayAdapter<>(this,android.R.layout.simple_dropdown_item_1line,cities); e.setAdapter(a); e.setOnClickListener(v->e.showDropDown()); e.setOnFocusChangeListener((v,h)->{ if(h)e.showDropDown(); }); return e;
+    }
+    private Button button(String text,int color){ Button b=new Button(this); b.setText(text); b.setTextColor(Color.WHITE); b.setTextSize(15); b.setAllCaps(false); b.setBackground(bg(color,14,color,0)); b.setPadding(dp(8),0,dp(8),0); return b; }
+    private LinearLayout section(String title){ LinearLayout box=new LinearLayout(this); box.setOrientation(LinearLayout.VERTICAL); box.setPadding(dp(13),dp(11),dp(13),dp(13)); box.setBackground(bg(PANEL,18,BORDER,1)); TextView t=label(title); t.setTextSize(17); t.setTypeface(null,1); box.addView(t,new LinearLayout.LayoutParams(-1,dp(38))); return box; }
+    private void gap(LinearLayout p,int h){ Space s=new Space(this); p.addView(s,new LinearLayout.LayoutParams(1,dp(h))); }
+    private void gapH(LinearLayout p,int w){ Space s=new Space(this); p.addView(s,new LinearLayout.LayoutParams(dp(w),1)); }
+
+    private void buildUi(){
+        LinearLayout root=new LinearLayout(this); root.setOrientation(LinearLayout.VERTICAL); root.setBackgroundColor(BG);
+        root.setOnApplyWindowInsetsListener((v,insets)->{ int top=0,bottom=0; try{ top=insets.getSystemWindowInsetTop(); bottom=insets.getSystemWindowInsetBottom(); }catch(Exception ignored){} v.setPadding(0,top,0,bottom); return insets; });
+
+        ImageView banner=new ImageView(this); banner.setImageResource(R.drawable.raja_banner); banner.setScaleType(ImageView.ScaleType.CENTER_CROP); banner.setAdjustViewBounds(false); root.addView(banner,new LinearLayout.LayoutParams(-1,dp(132)));
+
+        LinearLayout brand=new LinearLayout(this); brand.setOrientation(LinearLayout.HORIZONTAL); brand.setGravity(Gravity.CENTER_VERTICAL); brand.setPadding(dp(16),dp(8),dp(16),dp(8)); brand.setBackground(bg(PANEL,0,BORDER,0));
+        TextView brandText=label("🤖  MASOUD Raja Bot\nدستیار هوشمند خرید بلیت قطار رجا"); brandText.setGravity(Gravity.LEFT|Gravity.CENTER_VERTICAL); brandText.setTextSize(18); brandText.setTypeface(null,1); brand.addView(brandText,new LinearLayout.LayoutParams(0,dp(62),1));
+        TextView ver=label(VERSION+"\n● آماده"); ver.setGravity(Gravity.CENTER); ver.setTextColor(GREEN); ver.setBackground(bg(PANEL_2,16,BORDER,1)); brand.addView(ver,new LinearLayout.LayoutParams(dp(96),dp(58))); root.addView(brand);
+
+        FrameLayout body=new FrameLayout(this); root.addView(body,new LinearLayout.LayoutParams(-1,0,1));
+        homePanel=makeHomePanel(); passengerPanel=makePassengerPanel(); settingsPanel=makeSettingsPanel(); logsPanel=makeLogsPanel(); browserPanel=makeBrowserPanel();
+        body.addView(homePanel); body.addView(passengerPanel); body.addView(settingsPanel); body.addView(logsPanel); body.addView(browserPanel);
+
+        LinearLayout nav=new LinearLayout(this); nav.setOrientation(LinearLayout.HORIZONTAL); nav.setPadding(dp(8),dp(6),dp(8),dp(8)); nav.setBackgroundColor(BG);
+        navHome=button("⌂\nخانه",PANEL_2); navPassengers=button("♟\nمسافران",PANEL_2); navSettings=button("⚙\nتنظیمات",PANEL_2); navLogs=button("☷\nلاگ‌ها",PANEL_2);
+        nav.addView(navHome,new LinearLayout.LayoutParams(0,dp(58),1)); gapH(nav,5); nav.addView(navPassengers,new LinearLayout.LayoutParams(0,dp(58),1)); gapH(nav,5); nav.addView(navSettings,new LinearLayout.LayoutParams(0,dp(58),1)); gapH(nav,5); nav.addView(navLogs,new LinearLayout.LayoutParams(0,dp(58),1)); root.addView(nav);
+        navHome.setOnClickListener(v->showPanel(homePanel)); navPassengers.setOnClickListener(v->showPanel(passengerPanel)); navSettings.setOnClickListener(v->showPanel(settingsPanel)); navLogs.setOnClickListener(v->showPanel(logsPanel));
+        setContentView(root);
