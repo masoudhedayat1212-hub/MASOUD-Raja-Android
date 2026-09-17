@@ -39,7 +39,6 @@ jobs:
           Path('buildsrc/MASOUD_Android/app/src/main/java/com/masoud/raja/MainActivity.java').write_bytes(gzip.decompress(dec('v5/MainActivity.java.gz.b64')))
           banner=dec('v5/train_banner.b64')
           Path('buildsrc/MASOUD_Android/app/src/main/res/drawable-nodpi/train_banner.jpg').write_bytes(banner)
-          Path('buildsrc/MASOUD_Android/app/src/main/res/drawable-nodpi/header_reference.jpg').write_bytes(banner)
           PY
           cp v5/ic_train.xml "$APP/app/src/main/res/drawable/ic_train.xml"
           python3 v6/patch.py
@@ -50,10 +49,7 @@ jobs:
         run: |
           set -euo pipefail
           MAIN=buildsrc/MASOUD_Android/app/src/main/java/com/masoud/raja/MainActivity.java
-          test -s buildsrc/MASOUD_Android/app/src/main/res/drawable-nodpi/header_reference.jpg
-          file buildsrc/MASOUD_Android/app/src/main/res/drawable-nodpi/header_reference.jpg | grep -q 'JPEG image data'
           grep -q 'private static final String VERSION = "V8"' "$MAIN"
-          grep -q 'R.drawable.header_reference' "$MAIN"
           grep -q 'یک طرفه' "$MAIN"
           grep -q 'اکانت رجا' "$MAIN"
           grep -q 'شماره قطار' "$MAIN"
