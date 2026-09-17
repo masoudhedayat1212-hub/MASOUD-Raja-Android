@@ -23,33 +23,31 @@ import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
 import android.widget.*;
-import org.json.JSONArray;
 import org.json.JSONObject;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 
 public class MainActivity extends Activity {
-    private static final int BG = Color.rgb(5,14,25);
-    private static final int PANEL = Color.rgb(10,25,40);
-    private static final int PANEL_2 = Color.rgb(14,34,53);
-    private static final int FIELD = Color.rgb(8,23,38);
-    private static final int TEXT = Color.rgb(244,249,255);
-    private static final int MUTED = Color.rgb(148,171,190);
+    private static final int BG = Color.rgb(244,249,255);
+    private static final int PANEL = Color.rgb(255,255,255);
+    private static final int PANEL_2 = Color.rgb(225,241,255);
+    private static final int FIELD = Color.rgb(255,255,255);
+    private static final int TEXT = Color.rgb(18,48,74);
+    private static final int MUTED = Color.rgb(105,139,166);
     private static final int BLUE = Color.rgb(0,132,255);
     private static final int CYAN = Color.rgb(0,206,255);
     private static final int GREEN = Color.rgb(0,200,120);
     private static final int RED = Color.rgb(255,67,82);
-    private static final int BORDER = Color.rgb(28,74,106);
+    private static final int BORDER = Color.rgb(185,220,246);
 
     private final Handler handler = new Handler(Looper.getMainLooper());
     private WebView webView;
-    private EditText phone, password, origin, destination, travelDate, trainNumber, minPrice, maxPrice, adults, children, refresh, passengerName, passengerFamily, passengerNational, passengerBirth;
+    private EditText phone, password, origin, destination, travelDate, trainNumber, minPrice, maxPrice, adults, children, refresh;
     private CheckBox priceMode, coupe, alarm;
-    private TextView status, logView, passengerCountLabel;
-    private LinearLayout runPanel, passengerPanel, browserPanel, passengerList;
-    private Button startBtn, stopBtn, tabRun, tabPassengers, tabBrowser;
-    private final List<Passenger> passengers = new ArrayList<>();
+    private TextView status, logView;
+    private LinearLayout runPanel, browserPanel;
+    private Button startBtn, stopBtn, tabRun, tabBrowser;
     private boolean running = false;
     private boolean loggedIn = false;
     private boolean searchSubmitted = false;
@@ -99,16 +97,16 @@ public class MainActivity extends Activity {
         LinearLayout header=new LinearLayout(this); header.setOrientation(LinearLayout.HORIZONTAL); header.setGravity(Gravity.CENTER); header.setPadding(dp(12),dp(8),dp(12),dp(8));
         TextView title = new TextView(this); title.setText("🚆  MASOUD Raja Bot  •  V3"); title.setTextColor(TEXT); title.setTextSize(20); title.setTypeface(null,1); title.setGravity(Gravity.CENTER); header.addView(title,new LinearLayout.LayoutParams(-1,dp(48))); root.addView(header);
         LinearLayout tabs = new LinearLayout(this); tabs.setOrientation(LinearLayout.HORIZONTAL); tabs.setPadding(dp(10),0,dp(10),dp(10)); tabs.setGravity(Gravity.CENTER);
-        tabRun=button("⌂  خانه",BLUE); tabPassengers=button("👤  مسافران",PANEL_2); tabBrowser=button("▣  رجا",PANEL_2);
-        tabs.addView(tabRun,new LinearLayout.LayoutParams(0,dp(48),1)); gapH(tabs,6); tabs.addView(tabPassengers,new LinearLayout.LayoutParams(0,dp(48),1)); gapH(tabs,6); tabs.addView(tabBrowser,new LinearLayout.LayoutParams(0,dp(48),1)); root.addView(tabs);
+        tabRun=button("⌂  خانه",BLUE); tabBrowser=button("▣  رجا",PANEL_2);
+        tabs.addView(tabRun,new LinearLayout.LayoutParams(0,dp(48),1)); gapH(tabs,6); tabs.addView(tabBrowser,new LinearLayout.LayoutParams(0,dp(48),1)); root.addView(tabs);
         FrameLayout body = new FrameLayout(this); root.addView(body,new LinearLayout.LayoutParams(-1,0,1));
-        runPanel = makeRunPanel(); passengerPanel = makePassengerPanel(); browserPanel = makeBrowserPanel(); body.addView(runPanel); body.addView(passengerPanel); body.addView(browserPanel);
-        tabRun.setOnClickListener(v->showPanel(runPanel)); tabPassengers.setOnClickListener(v->showPanel(passengerPanel)); tabBrowser.setOnClickListener(v->showPanel(browserPanel)); setContentView(root);
+        runPanel = makeRunPanel(); browserPanel = makeBrowserPanel(); body.addView(runPanel); body.addView(browserPanel);
+        tabRun.setOnClickListener(v->showPanel(runPanel)); tabBrowser.setOnClickListener(v->showPanel(browserPanel)); setContentView(root);
     }
 
     private void gapH(LinearLayout p,int w){ Space s=new Space(this); p.addView(s,new LinearLayout.LayoutParams(dp(w),1)); }
     private void tabStyle(Button b,boolean active){ b.setBackground(bg(active?BLUE:PANEL_2,14,active?CYAN:BORDER,1)); b.setTextColor(active?Color.WHITE:MUTED); }
-    private void showPanel(View target){ runPanel.setVisibility(target==runPanel?View.VISIBLE:View.GONE); passengerPanel.setVisibility(target==passengerPanel?View.VISIBLE:View.GONE); browserPanel.setVisibility(target==browserPanel?View.VISIBLE:View.GONE); if(tabRun!=null){ tabStyle(tabRun,target==runPanel); tabStyle(tabPassengers,target==passengerPanel); tabStyle(tabBrowser,target==browserPanel); } }
+    private void showPanel(View target){ runPanel.setVisibility(target==runPanel?View.VISIBLE:View.GONE); browserPanel.setVisibility(target==browserPanel?View.VISIBLE:View.GONE); if(tabRun!=null){ tabStyle(tabRun,target==runPanel); tabStyle(tabBrowser,target==browserPanel); } }
 
     private LinearLayout makeRunPanel(){
         ScrollView scroll=new ScrollView(this); scroll.setFillViewport(true); LinearLayout p=new LinearLayout(this); p.setOrientation(LinearLayout.VERTICAL); p.setPadding(dp(10),0,dp(10),dp(24)); scroll.addView(p);
@@ -120,7 +118,7 @@ public class MainActivity extends Activity {
         LinearLayout search=section("تنظیمات جستجو"); trainNumber=field("شماره قطار"); trainNumber.setInputType(InputType.TYPE_CLASS_NUMBER); search.addView(trainNumber); gap(search,7);
         priceMode=new CheckBox(this); priceMode.setText("جستجو با بازه قیمت"); priceMode.setTextColor(TEXT); search.addView(priceMode); minPrice=field("از قیمت (ریال)"); minPrice.setInputType(InputType.TYPE_CLASS_NUMBER); maxPrice=field("تا قیمت (ریال)"); maxPrice.setInputType(InputType.TYPE_CLASS_NUMBER); search.addView(minPrice); gap(search,6); search.addView(maxPrice); gap(search,7);
         coupe=new CheckBox(this); coupe.setText("فقط کوپه دربست"); coupe.setTextColor(TEXT); alarm=new CheckBox(this); alarm.setText("آلارم صوتی پیدا شدن بلیت"); alarm.setTextColor(TEXT); alarm.setChecked(true); search.addView(coupe); search.addView(alarm); p.addView(search); gap(p,9);
-        LinearLayout live=section("کنترل زنده"); LinearLayout rr=new LinearLayout(this); rr.setOrientation(LinearLayout.HORIZONTAL); rr.setGravity(Gravity.CENTER_VERTICAL); Button refreshIcon=button("↻",BLUE); refresh=field("رفرش"); refresh.setText("2"); refresh.setFocusable(false); refresh.setGravity(Gravity.CENTER); TextView sec=label("ثانیه"); sec.setGravity(Gravity.CENTER); View.OnClickListener openRefresh=v->showRefreshMenu(refreshIcon); refreshIcon.setOnClickListener(openRefresh); refresh.setOnClickListener(openRefresh); rr.addView(refreshIcon,new LinearLayout.LayoutParams(dp(58),dp(50))); gapH(rr,7); rr.addView(refresh,new LinearLayout.LayoutParams(dp(76),dp(50))); rr.addView(sec,new LinearLayout.LayoutParams(dp(65),dp(50))); live.addView(rr); passengerCountLabel=label("مسافر ذخیره‌شده: 0"); live.addView(passengerCountLabel); p.addView(live); gap(p,9);
+        LinearLayout live=section("کنترل زنده"); LinearLayout rr=new LinearLayout(this); rr.setOrientation(LinearLayout.HORIZONTAL); rr.setGravity(Gravity.CENTER_VERTICAL); Button refreshIcon=button("↻",BLUE); refresh=field("رفرش"); refresh.setText("2"); refresh.setFocusable(false); refresh.setGravity(Gravity.CENTER); TextView sec=label("ثانیه"); sec.setGravity(Gravity.CENTER); View.OnClickListener openRefresh=v->showRefreshMenu(refreshIcon); refreshIcon.setOnClickListener(openRefresh); refresh.setOnClickListener(openRefresh); rr.addView(refreshIcon,new LinearLayout.LayoutParams(dp(58),dp(50))); gapH(rr,7); rr.addView(refresh,new LinearLayout.LayoutParams(dp(76),dp(50))); rr.addView(sec,new LinearLayout.LayoutParams(dp(65),dp(50))); live.addView(rr); p.addView(live); gap(p,9);
         LinearLayout account=section("حساب رجا"); phone=field("شماره موبایل حساب رجا"); phone.setInputType(InputType.TYPE_CLASS_PHONE); password=field("رمز عبور"); password.setInputType(InputType.TYPE_CLASS_TEXT|InputType.TYPE_TEXT_VARIATION_PASSWORD); account.addView(phone); gap(account,8); account.addView(password); p.addView(account); gap(p,9);
         LinearLayout actions=new LinearLayout(this); actions.setOrientation(LinearLayout.HORIZONTAL); startBtn=button("▶ شروع جستجو",GREEN); stopBtn=button("■ توقف",RED); stopBtn.setEnabled(false); actions.addView(stopBtn,new LinearLayout.LayoutParams(0,dp(54),1)); gapH(actions,7); actions.addView(startBtn,new LinearLayout.LayoutParams(0,dp(54),2)); p.addView(actions); gap(p,9);
         status=label("● آماده"); status.setTextColor(GREEN); status.setBackground(bg(PANEL,12,BORDER,1)); status.setPadding(dp(12),dp(10),dp(12),dp(10)); p.addView(status,new LinearLayout.LayoutParams(-1,dp(46))); gap(p,9);
@@ -147,12 +145,6 @@ public class MainActivity extends Activity {
         new AlertDialog.Builder(this).setTitle("انتخاب تاریخ شمسی").setView(box).setNegativeButton("لغو",null).setPositiveButton("تأیید",(d,w)-> travelDate.setText(year.getSelectedItem()+"/"+String.format(Locale.US,"%02d",month.getSelectedItemPosition()+1)+"/"+String.format(Locale.US,"%02d",selected[0]))).show();
     }
 
-    private LinearLayout makePassengerPanel(){
-        ScrollView scroll=new ScrollView(this); LinearLayout p=new LinearLayout(this); p.setOrientation(LinearLayout.VERTICAL); p.setPadding(dp(10),0,dp(10),dp(20)); scroll.addView(p);
-        LinearLayout form=section("افزودن مسافر"); passengerName=field("نام"); passengerFamily=field("نام خانوادگی"); passengerNational=field("کد ملی"); passengerNational.setInputType(InputType.TYPE_CLASS_NUMBER); passengerBirth=field("تاریخ تولد مثل 1370/01/01"); form.addView(passengerName); gap(form,6); form.addView(passengerFamily); gap(form,6); form.addView(passengerNational); gap(form,6); form.addView(passengerBirth); gap(form,8); Button add=button("+ افزودن مسافر",BLUE); form.addView(add); p.addView(form); gap(p,8); passengerList=section("مسافران ثبت‌شده"); p.addView(passengerList); add.setOnClickListener(v->addPassenger());
-        LinearLayout container=new LinearLayout(this); container.setOrientation(LinearLayout.VERTICAL); container.addView(scroll,new LinearLayout.LayoutParams(-1,-1)); return container;
-    }
-
     private LinearLayout makeBrowserPanel(){ LinearLayout p=new LinearLayout(this); p.setOrientation(LinearLayout.VERTICAL); p.setPadding(dp(8),0,dp(8),dp(8)); TextView h=label("صفحه رجا — هنگام پیدا شدن بلیت خودکار باز می‌شود"); h.setGravity(Gravity.CENTER); h.setTextColor(CYAN); p.addView(h,new LinearLayout.LayoutParams(-1,dp(38))); webView=new WebView(this); webView.setBackgroundColor(Color.WHITE); p.addView(webView,new LinearLayout.LayoutParams(-1,0,1)); return p; }
 
     private void setupWebView(){
@@ -161,14 +153,6 @@ public class MainActivity extends Activity {
         webView.loadUrl("https://www.raja.ir/");
     }
 
-    private void addPassenger(){
-        String n=passengerName.getText().toString().trim(), f=passengerFamily.getText().toString().trim(), id=passengerNational.getText().toString().trim(), b=passengerBirth.getText().toString().trim();
-        if(n.isEmpty()||f.isEmpty()||id.isEmpty()||b.isEmpty()){ toast("همه مشخصات مسافر را وارد کن."); return; }
-        Passenger ps=new Passenger(n,f,id,b); passengers.add(ps); passengerName.setText(""); passengerFamily.setText(""); passengerNational.setText(""); passengerBirth.setText(""); renderPassengers();
-    }
-    private void renderPassengers(){
-        while(passengerList.getChildCount()>1) passengerList.removeViewAt(1); for(int i=0;i<passengers.size();i++){ final int idx=i; Passenger ps=passengers.get(i); LinearLayout row=new LinearLayout(this); row.setOrientation(LinearLayout.HORIZONTAL); Button del=button("حذف",RED); TextView t=label(ps.name+" "+ps.family+" | "+ps.national+" | "+ps.birth); row.addView(del,new LinearLayout.LayoutParams(dp(80),dp(44))); row.addView(t,new LinearLayout.LayoutParams(0,dp(44),1)); del.setOnClickListener(v->{ passengers.remove(idx); renderPassengers(); }); passengerList.addView(row); } passengerCountLabel.setText("مسافر ذخیره‌شده: "+passengers.size());
-    }
 
     private void startBot(){
         if(origin.getText().toString().trim().isEmpty()||destination.getText().toString().trim().isEmpty()||travelDate.getText().toString().trim().isEmpty()){ toast("مبدا، مقصد و تاریخ را کامل کن."); return; }
@@ -184,7 +168,7 @@ public class MainActivity extends Activity {
 
     private void advanceAutomation(){
         if(!running) return; String url=webView.getUrl()==null?"":webView.getUrl();
-        if(url.contains("registerticket")){ reserved=true; status.setText("● وارد صفحه مشخصات مسافر شد."); log("رزرو و ادامه خرید انجام شد؛ صفحه مشخصات مسافر باز شد."); fillPassengerPage(); showPanel(browserPanel); if(alarm.isChecked()) playAlarmOnce(); return; }
+        if(url.contains("registerticket")){ reserved=true; status.setText("● وارد صفحه مشخصات مسافر شد."); log("رزرو و ادامه خرید انجام شد؛ صفحه مشخصات مسافر باز شد."); showPanel(browserPanel); if(alarm.isChecked()) playAlarmOnce(); return; }
         if(!loggedIn){ injectLogin(); return; }
         if(!searchSubmitted){ injectSearchForm(); return; }
         inspectResultsAndReserve();
@@ -207,11 +191,6 @@ public class MainActivity extends Activity {
         webView.evaluateJavascript(js,null);
     }
 
-    private void fillPassengerPage(){
-        if(passengers.isEmpty()) return; JSONArray arr=new JSONArray(); try{for(Passenger p:passengers){JSONObject o=new JSONObject();o.put("name",p.name);o.put("family",p.family);o.put("national",p.national);o.put("birth",p.birth);arr.put(o);}}catch(Exception ignored){}
-        String js="(function(){try{const data="+arr.toString()+";const blocks=[...document.querySelectorAll('.passenger-registor')];const fire=e=>{e.dispatchEvent(new Event('input',{bubbles:true}));e.dispatchEvent(new Event('change',{bubbles:true}));};data.slice(0,blocks.length).forEach((p,i)=>{let b=blocks[i];let n=b.querySelector('input[name=pName]');let f=b.querySelector('input[name=pFamily]');let birth=[...b.querySelectorAll('input')].find(x=>x.maxLength===10&&(x.placeholder||'').includes('/'));let nat=[...b.querySelectorAll('input')].find(x=>x.maxLength===10&&x!==birth&&!x.name);[[n,p.name],[f,p.family],[birth,p.birth],[nat,p.national]].forEach(z=>{if(z[0]){z[0].value=z[1];fire(z[0]);}});});MasoudBridge.log('مشخصات '+Math.min(data.length,blocks.length)+' مسافر وارد شد.');}catch(e){MasoudBridge.log('خطای تکمیل مسافر: '+e);}})();"; webView.evaluateJavascript(js,null);
-    }
-
     private int parseInt(String s,int def){ try{return Math.max(0,Integer.parseInt(s.trim()));}catch(Exception e){return def;} }
     private String digitsOnly(String s){ return s==null?"":s.replaceAll("[^0-9]",""); }
     private String q(String s){ return JSONObject.quote(s==null?"":s); }
@@ -230,5 +209,4 @@ public class MainActivity extends Activity {
         @JavascriptInterface public void notFound(){ runOnUiThread(()->{ reserved=false; status.setText("● یافت نشد؛ جستجوی مجدد..."); log("بلیط مطابق معیار فعلاً یافت نشد."); }); }
     }
 
-    private static class Passenger { final String name,family,national,birth; Passenger(String n,String f,String id,String b){name=n;family=f;national=id;birth=b;} }
 }
