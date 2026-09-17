@@ -32,7 +32,8 @@ jobs:
           base64 -d v5/train_banner.b64 > "$APP/app/src/main/res/drawable-nodpi/train_banner.jpg"
           cp v5/ic_train.xml "$APP/app/src/main/res/drawable/ic_train.xml"
           python3 v6/patch.py
-          base64 -d v8/header_reference.b64 > "$APP/app/src/main/res/drawable-nodpi/header_reference.jpg"
+          cat v8/header_chunks/0.txt v8/header_chunks/1.txt v8/header_chunks/2.txt v8/header_chunks/3.txt v8/header_chunks/4.txt v8/header_chunks/5.txt > /tmp/header_reference.b64
+          base64 -d /tmp/header_reference.b64 > "$APP/app/src/main/res/drawable-nodpi/header_reference.jpg"
           python3 v8/patch_v8.py
 
       - name: Verify V8 UI and Raja login logic
@@ -41,6 +42,7 @@ jobs:
           set -euo pipefail
           MAIN=buildsrc/MASOUD_Android/app/src/main/java/com/masoud/raja/MainActivity.java
           test -s buildsrc/MASOUD_Android/app/src/main/res/drawable-nodpi/header_reference.jpg
+          file buildsrc/MASOUD_Android/app/src/main/res/drawable-nodpi/header_reference.jpg | grep -q 'JPEG image data'
           grep -q 'private static final String VERSION = "V8"' "$MAIN"
           grep -q 'R.drawable.header_reference' "$MAIN"
           grep -q 'یک طرفه' "$MAIN"
