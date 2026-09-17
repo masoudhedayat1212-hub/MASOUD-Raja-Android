@@ -26,6 +26,8 @@ jobs:
           APP=buildsrc/MASOUD_Android
           MAIN="$APP/app/src/main/java/com/masoud/raja/MainActivity.java"
           cp v3/MainActivity.java "$MAIN"
+          sed -i 's/import android.app.Ringtone;/import android.media.Ringtone;/' "$MAIN"
+          sed -i 's/import android.app.RingtoneManager;/import android.media.RingtoneManager;/' "$MAIN"
           python3 - <<'PY'
           from pathlib import Path
           p=Path('buildsrc/MASOUD_Android/app/build.gradle')
