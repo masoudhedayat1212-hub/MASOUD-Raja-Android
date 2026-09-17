@@ -70,3 +70,4 @@ jobs:
           name: MASOUD-Raja-V8
           path: output/MASOUD_Raja_V8.apk
           if-no-files-found: error
+# trigger-v8-build-20260918
