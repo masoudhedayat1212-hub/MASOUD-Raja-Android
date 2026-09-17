@@ -1,8 +1,8 @@
-name: Android Build
+name: Android Build V4
 
 on:
   push:
-    branches: [ main ]
+    branches: [ v4-build ]
   workflow_dispatch:
 
 jobs:
@@ -20,66 +20,76 @@ jobs:
 
       - name: Unpack original working project
         run: |
+          set -e
           rm -rf buildsrc
           mkdir -p buildsrc
           unzip -q MASOUD_Android_v1.zip -d buildsrc
           test -f buildsrc/MASOUD_Android/app/src/main/java/com/masoud/raja/MainActivity.java
           cp buildsrc/MASOUD_Android/app/src/main/java/com/masoud/raja/MainActivity.java /tmp/MainActivity_v1.java
 
-      - name: Apply approved V3 UI on V1 logic
+      - name: Apply corrected V4
         shell: bash
         run: |
           set -e
           APP=buildsrc/MASOUD_Android
-          cp v3/MainActivity.java "$APP/app/src/main/java/com/masoud/raja/MainActivity.java"
-          sed -i 's/import android.app.Ringtone;/import android.media.Ringtone;/' "$APP/app/src/main/java/com/masoud/raja/MainActivity.java"
-          sed -i 's/import android.app.RingtoneManager;/import android.media.RingtoneManager;/' "$APP/app/src/main/java/com/masoud/raja/MainActivity.java"
-
-          python - <<'PY'
-          from pathlib import Path
-          old=Path('/tmp/MainActivity_v1.java').read_text(encoding='utf-8')
-          new=Path('buildsrc/MASOUD_Android/app/src/main/java/com/masoud/raja/MainActivity.java').read_text(encoding='utf-8')
-          pairs=[
-              ('private void injectLogin(){','private void injectSearchForm(){'),
-              ('private void injectSearchForm(){','private void inspectResultsAndReserve(){'),
-              ('private void inspectResultsAndReserve(){','private void fillPassengerPage(){'),
-              ('private void fillPassengerPage(){','private int parseInt('),
-          ]
-          for start,end in pairs:
-              a=old[old.index(start):old.index(end)]
-              b=new[new.index(start):new.index(end)]
-              if a!=b:
-                  raise SystemExit('V1 automation logic changed unexpectedly: '+start)
-          for exact in [
-              '@JavascriptInterface public void loginClicked(){ runOnUiThread(()->{ loggedIn=true; log("دکمه ورود زده شد؛ منتظر تکمیل ورود..."); handler.postDelayed(()->advanceAutomation(),2600); }); }',
-              '@JavascriptInterface public void searchClicked(){ runOnUiThread(()->{ searchSubmitted=true; nextRefreshAt=System.currentTimeMillis()+(long)(getRefreshSeconds()*1000); log("جستجو ارسال شد؛ پایش مداوم فعال است."); handler.postDelayed(()->advanceAutomation(),1300); }); }'
-          ]:
-              if exact not in new:
-                  raise SystemExit('V1 timing/login behavior not preserved')
-          print('V1 Raja login/search/reserve automation preserved')
-          PY
+          base64 -d v4/MainActivity.java.gz.b64 | gzip -dc > "$APP/app/src/main/java/com/masoud/raja/MainActivity.java"
+          mkdir -p "$APP/app/src/main/res/drawable-nodpi" "$APP/app/src/main/res/drawable"
+          base64 -d v4/train_banner.jpg.b64 > "$APP/app/src/main/res/drawable-nodpi/train_banner.jpg"
 
           python - <<'PY'
           from pathlib import Path
           app=Path('buildsrc/MASOUD_Android')
+          src=app/'app/src/main/java/com/masoud/raja/MainActivity.java'
+          old=Path('/tmp/MainActivity_v1.java').read_text(encoding='utf-8')
+          new=src.read_text(encoding='utf-8')
+
+          def method(text, signature):
+              p=text.index(signature)
+              b=text.index('{',p)
+              depth=0
+              for i in range(b,len(text)):
+                  if text[i]=='{': depth+=1
+                  elif text[i]=='}':
+                      depth-=1
+                      if depth==0: return text[p:i+1]
+              raise RuntimeError(signature)
+
+          # Login code from the first user-tested working APK must stay byte-for-byte the same.
+          if method(old,'private void injectLogin()') != method(new,'private void injectLogin()'):
+              raise SystemExit('Working V1 login logic was changed')
+
+          checks=[
+              'private static final String VERSION = "V4"',
+              'مبدا — تایپ یا انتخاب',
+              'مقصد — تایپ یا انتخاب',
+              'تقویم شمسی — روز / ماه / سال',
+              'for(int i=1;i<=10;i++)',
+              'خروج از حساب رجا',
+              'تاریخ رفت واقعاً ثبت شد',
+              'کپی لاگ',
+              'R.drawable.train_banner',
+              'WindowInsets.Type.systemBars()',
+          ]
+          for x in checks:
+              if x not in new: raise SystemExit('Missing V4 feature: '+x)
+          print('V4 source checks passed; V1 login preserved')
+
           manifest=app/'app/src/main/AndroidManifest.xml'
           s=manifest.read_text(encoding='utf-8')
           s=s.replace('android:label="MASOUD" android:usesCleartextTraffic="false"','android:label="MASOUD Raja" android:icon="@drawable/ic_train" android:roundIcon="@drawable/ic_train" android:usesCleartextTraffic="false"')
           manifest.write_text(s,encoding='utf-8')
 
           gradle=app/'app/build.gradle'
-          s=gradle.read_text(encoding='utf-8').replace('versionCode 1','versionCode 3').replace("versionName '1.0.0'","versionName '3.0.0'")
+          s=gradle.read_text(encoding='utf-8').replace('versionCode 1','versionCode 4').replace("versionName '1.0.0'","versionName '4.0.0'")
           gradle.write_text(s,encoding='utf-8')
 
           drawable=app/'app/src/main/res/drawable'
-          drawable.mkdir(parents=True,exist_ok=True)
-          (drawable/'ic_train.xml').write_text('''<vector xmlns:android="http://schemas.android.com/apk/res/android" android:width="108dp" android:height="108dp" android:viewportWidth="108" android:viewportHeight="108"><path android:fillColor="#071018" android:pathData="M0,0h108v108h-108z"/><path android:fillColor="#F4F7FB" android:pathData="M30,16c-8,0 -14,6 -14,14v42c0,8 6,14 14,14l-7,9v3h11l9,-10h22l9,10h11v-3l-7,-9c8,0 14,-6 14,-14V30c0,-8 -6,-14 -14,-14H30zM29,28h50v22H29V28zM31,61a7,7 0,1 1,0 14a7,7 0,0 1,0 -14zM77,61a7,7 0,1 1,0 14a7,7 0,0 1,0 -14z"/><path android:fillColor="#0084FF" android:pathData="M37,34h34v10H37z"/></vector>''',encoding='utf-8')
+          (drawable/'ic_train.xml').write_text('''<vector xmlns:android="http://schemas.android.com/apk/res/android" android:width="108dp" android:height="108dp" android:viewportWidth="108" android:viewportHeight="108"><path android:fillColor="#071018" android:pathData="M0,0h108v108h-108z"/><path android:fillColor="#F4F7FB" android:pathData="M30,16c-8,0 -14,6 -14,14v42c0,8 6,14 14,14l-7,9v3h11l9,-10h22l9,10h11v-3l-7,-9c8,0 14,-6 14,-14V30c0,-8 -6,-14 -14,-14H30zM29,28h50v22H29V28zM31,61a7,7 0,1 1,0 14a7,7 0,0 1,0 -14zM77,61a7,7 0,1 1,0 14a7,7 0,0 1,0 -14z"/><path android:fillColor="#0D7DF5" android:pathData="M37,34h34v10H37z"/></vector>''',encoding='utf-8')
           PY
 
-          grep -q 'MASOUD Raja Bot  •  V3' "$APP/app/src/main/java/com/masoud/raja/MainActivity.java"
-          grep -q 'for(int i=1;i<=10;i++)' "$APP/app/src/main/java/com/masoud/raja/MainActivity.java"
-          grep -q 'مبدا — تایپ یا انتخاب' "$APP/app/src/main/java/com/masoud/raja/MainActivity.java"
-          grep -q 'کپی لاگ' "$APP/app/src/main/java/com/masoud/raja/MainActivity.java"
+          test -s "$APP/app/src/main/res/drawable-nodpi/train_banner.jpg"
+          grep -q 'versionCode 4' "$APP/app/build.gradle"
+          grep -q "versionName '4.0.0'" "$APP/app/build.gradle"
           grep -q 'android:icon="@drawable/ic_train"' "$APP/app/src/main/AndroidManifest.xml"
 
       - name: Build APK
@@ -92,6 +102,7 @@ jobs:
 
       - name: Verify APK
         run: |
+          set -e
           APK=$(find buildsrc -type f -name '*.apk' | head -1)
           test -n "$APK"
           test -s "$APK"
@@ -99,19 +110,18 @@ jobs:
           echo "APK=$APK"
           ls -lh "$APK"
           sha256sum "$APK"
-          if command -v aapt >/dev/null 2>&1; then
-            aapt dump badging "$APK" | head -20
-          fi
+          unzip -l "$APK" | grep -q 'res/drawable-nodpi-v4/train_banner.jpg\|res/drawable-nodpi/train_banner.jpg\|train_banner'
 
       - name: Collect APK
         run: |
+          set -e
           mkdir -p output
           APK=$(find buildsrc -type f -name '*.apk' | head -1)
-          cp "$APK" output/MASOUD_Raja_Android_V3.apk
+          cp "$APK" output/MASOUD_Raja_Android_V4.apk
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: MASOUD-Raja-Android-V3-APK
-          path: output/MASOUD_Raja_Android_V3.apk
+          name: MASOUD-Raja-Android-V4-APK
+          path: output/MASOUD_Raja_Android_V4.apk
           if-no-files-found: error
