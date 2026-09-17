@@ -18,7 +18,7 @@ jobs:
           distribution: temurin
           java-version: '17'
 
-      - name: Prepare exact V8 reference build
+      - name: Prepare refined V8 reference build
         shell: bash
         run: |
           set -euo pipefail
@@ -38,22 +38,29 @@ jobs:
               return base64.b64decode(s,validate=False)
           Path('buildsrc/MASOUD_Android/app/src/main/java/com/masoud/raja/MainActivity.java').write_bytes(gzip.decompress(dec('v5/MainActivity.java.gz.b64')))
           Path('buildsrc/MASOUD_Android/app/src/main/res/drawable-nodpi/train_banner.jpg').write_bytes(dec('v5/train_banner.b64'))
-          Path('buildsrc/MASOUD_Android/app/src/main/res/drawable-nodpi/reference_screen.jpg').write_bytes(dec('v8/reference_screen.b64'))
           PY
           cp v5/ic_train.xml "$APP/app/src/main/res/drawable/ic_train.xml"
           python3 v6/patch.py
           python3 v8/patch_v8.py
-          python3 v8/exact_reference_patch.py
+          python3 v8/compact_patch.py
+          python3 v8/final_theme_patch.py
 
-      - name: Verify exact screen and Raja logic
+      - name: Verify V8 reference UI and Raja logic
         shell: bash
         run: |
           set -euo pipefail
           MAIN=buildsrc/MASOUD_Android/app/src/main/java/com/masoud/raja/MainActivity.java
-          test -s buildsrc/MASOUD_Android/app/src/main/res/drawable-nodpi/reference_screen.jpg
-          file buildsrc/MASOUD_Android/app/src/main/res/drawable-nodpi/reference_screen.jpg | grep -q 'JPEG image data'
-          grep -q 'R.drawable.reference_screen' "$MAIN"
-          grep -q 'ImageView.ScaleType.FIT_XY' "$MAIN"
+          grep -q 'private static final String VERSION = "V8"' "$MAIN"
+          grep -q 'ReferenceHeroView' "$MAIN"
+          grep -q 'RefIconView' "$MAIN"
+          grep -q 'یک طرفه' "$MAIN"
+          grep -q 'اکانت رجا' "$MAIN"
+          grep -q 'شماره قطار' "$MAIN"
+          grep -q 'از قیمت' "$MAIN"
+          grep -q 'تا قیمت' "$MAIN"
+          grep -q 'تاریخ حرکت' "$MAIN"
+          grep -q '1 مسافر' "$MAIN"
+          grep -q 'اجرای ربات قطار' "$MAIN"
           grep -q 'private void injectLoginFixed()' "$MAIN"
           grep -q 'injectLoginFixed();' "$MAIN"
           grep -q 'LOGIN_FALLBACK_CLICKED' "$MAIN"
@@ -75,11 +82,11 @@ jobs:
           unzip -t "$APK" >/dev/null
           sha256sum "$APK"
           mkdir -p "$GITHUB_WORKSPACE/output"
-          cp "$APK" "$GITHUB_WORKSPACE/output/MASOUD_Raja_V8_EXACT_REFERENCE.apk"
+          cp "$APK" "$GITHUB_WORKSPACE/output/MASOUD_Raja_V8_REFERENCE_FIXED.apk"
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: MASOUD-Raja-V8-EXACT-REFERENCE
-          path: output/MASOUD_Raja_V8_EXACT_REFERENCE.apk
+          name: MASOUD-Raja-V8-REFERENCE-FIXED
+          path: output/MASOUD_Raja_V8_REFERENCE_FIXED.apk
           if-no-files-found: error
