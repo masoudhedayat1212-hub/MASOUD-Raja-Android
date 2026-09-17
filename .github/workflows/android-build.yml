@@ -57,7 +57,7 @@ jobs:
           grep -q 'اکانت رجا' "$MAIN"
           grep -q 'اجرای ربات قطار' "$MAIN"
           grep -q 'private void startBot()' "$MAIN"
-          grep -Eq 'applicationId[[:space:]]+[\"'\"']com\\.masoud\\.raja\\.v3ref[\"'\"']' buildsrc/MASOUD_Android/app/build.gradle
+          grep -q "applicationId 'com.masoud.raja.v3ref'" buildsrc/MASOUD_Android/app/build.gradle
           grep -q 'versionCode 9' buildsrc/MASOUD_Android/app/build.gradle
 
       - name: Build APK
