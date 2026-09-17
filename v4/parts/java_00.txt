@@ -1,0 +1,45 @@
+package com.masoud.raja;
+
+import android.app.Activity;
+import android.app.AlertDialog;
+import android.content.ClipData;
+import android.content.ClipboardManager;
+import android.content.Context;
+import android.graphics.Typeface;
+import android.graphics.drawable.GradientDrawable;
+import android.media.Ringtone;
+import android.media.RingtoneManager;
+import android.net.Uri;
+import android.graphics.Color;
+import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
+import android.text.InputType;
+import android.view.Gravity;
+import android.view.View;
+import android.view.WindowManager;
+import android.webkit.CookieManager;
+import android.webkit.JavascriptInterface;
+import android.webkit.WebChromeClient;
+import android.webkit.WebSettings;
+import android.webkit.WebView;
+import android.webkit.WebViewClient;
+import android.widget.*;
+import android.view.WindowInsets;
+import org.json.JSONArray;
+import org.json.JSONObject;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Locale;
+
+public class MainActivity extends Activity {
+    private static final int BG = Color.rgb(7,16,24);
+    private static final int PANEL = Color.rgb(9,23,37);
+    private static final int PANEL_2 = Color.rgb(13,35,55);
+    private static final int FIELD = Color.rgb(10,20,28);
+    private static final int TEXT = Color.rgb(244,247,251);
+    private static final int MUTED = Color.rgb(154,171,186);
+    private static final int BLUE = Color.rgb(13,125,245);
+    private static final int GREEN = Color.rgb(0,200,83);
+    private static final int RED = Color.rgb(255,55,70);
+    private static final int BORDER = Color.rgb(30,72,105);
