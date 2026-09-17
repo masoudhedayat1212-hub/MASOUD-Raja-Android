@@ -24,9 +24,12 @@ jobs:
           set -euo pipefail
           rm -rf buildsrc output
           mkdir -p buildsrc output
-          unzip -q MASOUD_Android_v5.zip -d buildsrc
+          unzip -q MASOUD_Android_v1.zip -d buildsrc
           APP=buildsrc/MASOUD_Android
+          MAIN="$APP/app/src/main/java/com/masoud/raja/MainActivity.java"
+          base64 -d v5/MainActivity.java.gz.b64 | gzip -d > "$MAIN"
           mkdir -p "$APP/app/src/main/res/drawable" "$APP/app/src/main/res/drawable-nodpi"
+          base64 -d v5/train_banner.b64 > "$APP/app/src/main/res/drawable-nodpi/train_banner.jpg"
           cp v5/ic_train.xml "$APP/app/src/main/res/drawable/ic_train.xml"
           python3 v6/patch.py
           base64 -d v8/header_reference.b64 > "$APP/app/src/main/res/drawable-nodpi/header_reference.jpg"
