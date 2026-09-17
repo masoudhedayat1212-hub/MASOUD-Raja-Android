@@ -7,7 +7,7 @@ marker='    private void injectSearchForm()'
 if marker not in s: raise SystemExit('injectSearchForm marker missing')
 fixed='''    private void injectLoginFixed(){
         injectLogin();
-        handler.postDelayed(()->web.evaluateJavascript("(function(){try{var vis=function(e){if(!e)return false;var r=e.getBoundingClientRect(),st=getComputedStyle(e);return r.width>0&&r.height>0&&st.display!='none'&&st.visibility!='hidden';};var els=[].slice.call(document.querySelectorAll('button,a,[role=button]'));var b=els.find(function(e){var t=(e.innerText||e.textContent||'').replace(/\\\\s+/g,' ').trim();return vis(e)&&(t==='ورود'||t.indexOf('ورود به حساب')>=0||t.indexOf('ورود / ثبت نام')>=0||t.indexOf('ورود/ثبت نام')>=0);});if(b){b.click();return 'LOGIN_FALLBACK_CLICKED';}return 'LOGIN_BUTTON_NOT_FOUND';}catch(e){return 'LOGIN_FALLBACK_ERROR:'+e.message;}})();",null),900);
+        handler.postDelayed(()->webView.evaluateJavascript("(function(){try{var vis=function(e){if(!e)return false;var r=e.getBoundingClientRect(),st=getComputedStyle(e);return r.width>0&&r.height>0&&st.display!='none'&&st.visibility!='hidden';};var els=[].slice.call(document.querySelectorAll('button,a,[role=button]'));var b=els.find(function(e){var t=(e.innerText||e.textContent||'').replace(/\\\\s+/g,' ').trim();return vis(e)&&(t==='ورود'||t.indexOf('ورود به حساب')>=0||t.indexOf('ورود / ثبت نام')>=0||t.indexOf('ورود/ثبت نام')>=0);});if(b){b.click();return 'LOGIN_FALLBACK_CLICKED';}return 'LOGIN_BUTTON_NOT_FOUND';}catch(e){return 'LOGIN_FALLBACK_ERROR:'+e.message;}})();",null),900);
     }
 
 '''
