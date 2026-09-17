@@ -11,12 +11,14 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
       - name: Set up JDK 17
         uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: '17'
-      - name: Prepare V6
+
+      - name: Prepare V7 UI
         shell: bash
         run: |
           set -euo pipefail
@@ -25,28 +27,49 @@ jobs:
           unzip -q MASOUD_Android_v1.zip -d buildsrc
           APP=buildsrc/MASOUD_Android
           MAIN="$APP/app/src/main/java/com/masoud/raja/MainActivity.java"
-          base64 -d v5/MainActivity.java.gz.b64 | gzip -d > "$MAIN"
-          mkdir -p "$APP/app/src/main/res/drawable-nodpi" "$APP/app/src/main/res/drawable"
-          base64 -d v5/train_banner.b64 > "$APP/app/src/main/res/drawable-nodpi/train_banner.jpg"
+          cp v7/MainActivity.java "$MAIN"
+          mkdir -p "$APP/app/src/main/res/drawable"
           cp v5/ic_train.xml "$APP/app/src/main/res/drawable/ic_train.xml"
-          python3 v6/patch.py
-      - name: Verify V6
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+          app=Path('buildsrc/MASOUD_Android')
+          manifest=app/'app/src/main/AndroidManifest.xml'
+          m=manifest.read_text(encoding='utf-8')
+          m=m.replace('android:label="MASOUD"','android:label="MASOUD Raja"')
+          if 'android:icon=' not in m:
+              m=m.replace('<application ','<application android:icon="@drawable/ic_train" android:roundIcon="@drawable/ic_train" ',1)
+          manifest.write_text(m,encoding='utf-8')
+          gradle=app/'app/build.gradle'
+          g=gradle.read_text(encoding='utf-8')
+          g=re.sub(r'versionCode\s+\d+','versionCode 7',g)
+          g=re.sub(r"versionName\s+'[^']+'","versionName '7.0.0'",g)
+          gradle.write_text(g,encoding='utf-8')
+          PY
+
+      - name: Verify V7 UI
         shell: bash
         run: |
           set -euo pipefail
           MAIN=buildsrc/MASOUD_Android/app/src/main/java/com/masoud/raja/MainActivity.java
-          grep -q 'private static final String VERSION = "V6"' "$MAIN"
-          grep -q 'private void injectLoginFixed()' "$MAIN"
-          grep -q 'LOGIN_FALLBACK_CLICKED' "$MAIN"
-          grep -q 'injectLoginFixed();' "$MAIN"
-          grep -q 'تاریخ رفت واقعاً ثبت شد' "$MAIN"
-          grep -q 'versionCode 6' buildsrc/MASOUD_Android/app/build.gradle
+          grep -q 'private static final String VERSION = "V7"' "$MAIN"
+          grep -q 'مبدا (شهر)' "$MAIN"
+          grep -q 'مقصد (شهر)' "$MAIN"
+          grep -q 'تاریخ رفت' "$MAIN"
+          grep -q 'بزرگسال' "$MAIN"
+          grep -q 'کودک' "$MAIN"
+          grep -q 'نوزاد' "$MAIN"
+          grep -q 'جستجوی قطار' "$MAIN"
+          ! grep -q 'مسافر ذخیره‌شده' "$MAIN"
+          grep -q 'versionCode 7' buildsrc/MASOUD_Android/app/build.gradle
+
       - name: Build APK
         shell: bash
         run: |
           set -euo pipefail
           cd buildsrc/MASOUD_Android
           gradle assembleDebug --stacktrace
+
       - name: Verify APK
         shell: bash
         run: |
@@ -56,10 +79,11 @@ jobs:
           unzip -t "$APK" >/dev/null
           sha256sum "$APK"
           mkdir -p "$GITHUB_WORKSPACE/output"
-          cp "$APK" "$GITHUB_WORKSPACE/output/MASOUD_Raja_Android_V6.apk"
+          cp "$APK" "$GITHUB_WORKSPACE/output/MASOUD_Raja_Android_V7_UI.apk"
+
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: MASOUD-Raja-Android-V6-APK
-          path: output/MASOUD_Raja_Android_V6.apk
+          name: MASOUD-Raja-Android-V7-UI-APK
+          path: output/MASOUD_Raja_Android_V7_UI.apk
           if-no-files-found: error
