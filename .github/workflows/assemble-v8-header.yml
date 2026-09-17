@@ -1,0 +1,28 @@
+name: Assemble V8 Header
+on:
+  push:
+    paths:
+      - '.github/workflows/assemble-v8-header.yml'
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  assemble:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Assemble exact approved header
+        run: |
+          set -euo pipefail
+          cat v8/header_chunks/0.txt v8/header_chunks/1.txt v8/header_chunks/2.txt v8/header_chunks/3.txt v8/header_chunks/4.txt v8/header_chunks/5.txt > v8/header_reference.b64
+          base64 -d v8/header_reference.b64 > /tmp/header.jpg
+          test -s /tmp/header.jpg
+          file /tmp/header.jpg | grep -q 'JPEG image data'
+      - name: Commit header
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add v8/header_reference.b64
+          if git diff --cached --quiet; then exit 0; fi
+          git commit -m 'Fix exact V8 reference header asset'
+          git push
