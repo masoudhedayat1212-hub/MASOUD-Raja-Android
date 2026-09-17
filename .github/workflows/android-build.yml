@@ -38,9 +38,9 @@ jobs:
           Path('buildsrc/MASOUD_Android/app/src/main/res/drawable-nodpi/header_reference_v3.jpg').write_bytes(base64.b64decode(s))
           g=Path('buildsrc/MASOUD_Android/app/build.gradle')
           t=g.read_text(encoding='utf-8')
-          t=re.sub(r'applicationId\s+"[^"]+"','applicationId "com.masoud.raja.v3ref"',t)
+          t=re.sub(r"applicationId\\s+['\"][^'\"]+['\"]","applicationId 'com.masoud.raja.v3ref'",t)
           t=re.sub(r'versionCode\s+\d+','versionCode 9',t)
-          t=re.sub(r'versionName\s+"[^"]+"','versionName "3.0-ref"',t)
+          t=re.sub(r"versionName\\s+['\"][^'\"]+['\"]","versionName '3.0-ref'",t)
           g.write_text(t,encoding='utf-8')
           PY
           python3 v3/reference_theme_patch.py
