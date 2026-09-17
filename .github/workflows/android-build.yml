@@ -37,11 +37,9 @@ jobs:
               s += '='*((4-len(s)%4)%4)
               return base64.b64decode(s,validate=False)
           Path('buildsrc/MASOUD_Android/app/src/main/java/com/masoud/raja/MainActivity.java').write_bytes(gzip.decompress(dec('v5/MainActivity.java.gz.b64')))
-          Path('buildsrc/MASOUD_Android/app/src/main/res/drawable-nodpi/train_banner.jpg').write_bytes(dec('v5/train_banner.b64'))
-          chunks=''.join(Path(f'v8/header_chunks/{i}.txt').read_text(encoding='utf-8') for i in range(6))
-          chunks=re.sub(r'[^A-Za-z0-9+/=]','',chunks)
-          chunks += '='*((4-len(chunks)%4)%4)
-          Path('buildsrc/MASOUD_Android/app/src/main/res/drawable-nodpi/header_reference.jpg').write_bytes(base64.b64decode(chunks,validate=False))
+          banner=dec('v5/train_banner.b64')
+          Path('buildsrc/MASOUD_Android/app/src/main/res/drawable-nodpi/train_banner.jpg').write_bytes(banner)
+          Path('buildsrc/MASOUD_Android/app/src/main/res/drawable-nodpi/header_reference.jpg').write_bytes(banner)
           PY
           cp v5/ic_train.xml "$APP/app/src/main/res/drawable/ic_train.xml"
           python3 v6/patch.py
