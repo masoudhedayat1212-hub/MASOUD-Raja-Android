@@ -43,6 +43,7 @@ jobs:
           cp v5/ic_train.xml "$APP/app/src/main/res/drawable/ic_train.xml"
           python3 v6/patch.py
           python3 v8/patch_v8.py
+          python3 v8/compact_patch.py
 
       - name: Verify V8 UI and Raja login logic
         shell: bash
@@ -58,6 +59,8 @@ jobs:
           grep -q 'تاریخ حرکت' "$MAIN"
           grep -q '1 مسافر' "$MAIN"
           grep -q 'اجرای ربات قطار' "$MAIN"
+          grep -q 'dp(58)' "$MAIN"
+          grep -q 'dp(155)' "$MAIN"
           grep -q 'private void injectLoginFixed()' "$MAIN"
           grep -q 'injectLoginFixed();' "$MAIN"
           grep -q 'LOGIN_FALLBACK_CLICKED' "$MAIN"
@@ -79,11 +82,11 @@ jobs:
           unzip -t "$APK" >/dev/null
           sha256sum "$APK"
           mkdir -p "$GITHUB_WORKSPACE/output"
-          cp "$APK" "$GITHUB_WORKSPACE/output/MASOUD_Raja_V8.apk"
+          cp "$APK" "$GITHUB_WORKSPACE/output/MASOUD_Raja_V8_compact.apk"
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: MASOUD-Raja-V8
-          path: output/MASOUD_Raja_V8.apk
+          name: MASOUD-Raja-V8-Compact
+          path: output/MASOUD_Raja_V8_compact.apk
           if-no-files-found: error
