@@ -1,4 +1,4 @@
-name: W2 Build
+name: W3 Build
 
 on:
   workflow_dispatch:
@@ -19,7 +19,7 @@ jobs:
           distribution: temurin
           java-version: '17'
 
-      - name: Prepare W2 from V3 reference
+      - name: Prepare W3 from W2 verified reference
         shell: bash
         run: |
           set -euo pipefail
@@ -53,9 +53,9 @@ jobs:
           t=p.read_text(encoding='utf-8')
           t=t.replace("applicationId 'com.masoud.raja'","applicationId 'com.masoud.raja.w2real'")
           t=t.replace('applicationId "com.masoud.raja"','applicationId "com.masoud.raja.w2real"')
-          t=t.replace('versionCode 1','versionCode 32')
-          t=t.replace("versionName '1.0.0'","versionName 'W2'")
-          t=t.replace('versionName "1.0.0"','versionName "W2"')
+          t=t.replace('versionCode 1','versionCode 33')
+          t=t.replace("versionName '1.0.0'","versionName 'W3'")
+          t=t.replace('versionName "1.0.0"','versionName "W3"')
           p.write_text(t,encoding='utf-8')
           PY
 
@@ -87,7 +87,7 @@ jobs:
           test -s "$APK"
           unzip -t "$APK" >/dev/null
           mkdir -p "$GITHUB_WORKSPACE/output"
-          cp "$APK" "$GITHUB_WORKSPACE/output/w2.apk"
+          cp "$APK" "$GITHUB_WORKSPACE/output/w3.apk"
 
       - uses: actions/upload-artifact@v4
         with:
