@@ -123,7 +123,7 @@ public class MainActivity extends Activity {
         referenceHeader.setAdjustViewBounds(false);
         headerFrame.addView(referenceHeader,new FrameLayout.LayoutParams(-1,-1));
         TextView version = new TextView(this);
-        version.setText("W9");
+        version.setText("W10");
         version.setTextColor(Color.BLACK);
         version.setTextSize(18);
         version.setTypeface(null,1);
@@ -302,7 +302,7 @@ public class MainActivity extends Activity {
         if(origin.getText().toString().trim().isEmpty()||destination.getText().toString().trim().isEmpty()||travelDate.getText().toString().trim().isEmpty()){ toast("مبدا، مقصد و تاریخ را کامل کن."); return; }
         if(phone.getText().toString().trim().isEmpty()||password.getText().toString().trim().isEmpty()){ toast("حساب رجا را وارد کن."); return; }
         if(!priceMode.isChecked() && trainNumber.getText().toString().trim().isEmpty()){ toast("شماره قطار را وارد کن یا حالت بازه قیمت را فعال کن."); return; }
-        saveAccount(); running=true; actionState=1; reauthRequired=true; logoutInProgress=false; loginInProgress=false; loginRetryCount=0; loggedIn=false; searchSubmitted=false; reserved=false; alarmPlayed=false; updateActionButtons(); status.setText("● فرمان شروع ثبت شد؛ در حال اجرا..."); status.setTextColor(Color.rgb(0,130,75)); logView.setText(""); log("شروع اجرا | "+origin.getText()+" ← "+destination.getText()+" | "+travelDate.getText()); log("تنظیمات | بزرگسال="+adults.getText()+" | کودک="+children.getText()+" | نوع="+passengerTypeLabel()+" | رفرش="+String.format(Locale.US,"%.1f",getRefreshSeconds())+" ثانیه");
+        saveAccount(); running=true; actionState=1; reauthRequired=true; logoutInProgress=false; loginInProgress=false; loginRetryCount=0; loggedIn=false; searchSubmitted=false; reserved=false; alarmPlayed=false; updateActionButtons(); status.setText("● فرمان شروع ثبت شد؛ در حال اجرا..."); status.setTextColor(Color.rgb(0,130,75)); logView.setText(""); log("شروع اجرا | "+origin.getText()+" ← "+destination.getText()+" | "+travelDate.getText()); log("تنظیمات | بزرگسال="+adults.getText()+" | کودک="+children.getText()+" | نوع="+passengerTypeLabel()+" | رفرش="+String.format(Locale.US,"%.1f",getRefreshSeconds())+" ثانیه"); showPanel(browserPanel);
         if(!webView.getUrl().startsWith("https://www.raja.ir")) webView.loadUrl("https://www.raja.ir/"); else webView.loadUrl("https://www.raja.ir/"); startMonitorLoop();
     }
     private void stopBot(String why){ running=false; actionState=2; if(monitorRunnable!=null) handler.removeCallbacks(monitorRunnable); updateActionButtons(); status.setText("■ "+why); status.setTextColor(RED); log(why); }
@@ -369,7 +369,7 @@ public class MainActivity extends Activity {
 
     private class JsBridge {
         @JavascriptInterface public void log(String m){ MainActivity.this.log(m); }
-        @JavascriptInterface public void logoutDone(){ runOnUiThread(()->{ if(!reauthRequired)return; reauthRequired=false; logoutInProgress=false; loggedIn=false; loginInProgress=false; log("خروج انجام شد؛ ورود مجدد..."); webView.loadUrl("https://www.raja.ir/"); }); }
+        @JavascriptInterface public void logoutDone(){ runOnUiThread(()->{ if(!reauthRequired)return; reauthRequired=false; logoutInProgress=false; loggedIn=false; loginInProgress=false; loginRetryCount=0; lastFinishedUrl=""; lastFinishedAt=0L; log("خروج انجام شد؛ ورود مجدد..."); webView.loadUrl("https://www.raja.ir/"); handler.postDelayed(()->{ if(running&&!loggedIn&&!loginInProgress){ log("صفحه ورود آماده شد؛ ادامه ورود..."); advanceAutomation(); } },1000); }); }
         @JavascriptInterface public void loginMissing(){ runOnUiThread(()->{ loginInProgress=false; loginRetryCount++; if(loginRetryCount<=5){ log("ورود/عضویت پیدا نشد؛ تلاش مجدد "+loginRetryCount+" از ۵"); handler.postDelayed(()->advanceAutomation(),100); }else{ stopBot("ورود به حساب رجا انجام نشد"); } }); }
         @JavascriptInterface public void loginClicked(){ runOnUiThread(()->{ loginInProgress=false; loggedIn=true; loginRetryCount=0; log("ورود زده شد؛ انتقال سریع به مرحله بعد"); handler.postDelayed(()->advanceAutomation(),100); }); }
         @JavascriptInterface public void searchClicked(){ runOnUiThread(()->{ searchSubmitted=true; nextRefreshAt=SystemClock.elapsedRealtime()+Math.round(getRefreshSeconds()*1000.0); log("جستجو ارسال شد؛ ناظر سریع در حال فعال‌شدن است."); handler.postDelayed(()->advanceAutomation(),100); }); }
