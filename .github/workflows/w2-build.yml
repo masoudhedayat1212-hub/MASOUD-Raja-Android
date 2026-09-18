@@ -1,4 +1,4 @@
-name: W3 Build
+name: W4 Build
 
 on:
   workflow_dispatch:
@@ -19,7 +19,7 @@ jobs:
           distribution: temurin
           java-version: '17'
 
-      - name: Prepare W3 from W2 verified reference
+      - name: Prepare W4 from W3 verified reference
         shell: bash
         run: |
           set -euo pipefail
@@ -53,9 +53,9 @@ jobs:
           t=p.read_text(encoding='utf-8')
           t=t.replace("applicationId 'com.masoud.raja'","applicationId 'com.masoud.raja.w2real'")
           t=t.replace('applicationId "com.masoud.raja"','applicationId "com.masoud.raja.w2real"')
-          t=t.replace('versionCode 1','versionCode 33')
-          t=t.replace("versionName '1.0.0'","versionName 'W3'")
-          t=t.replace('versionName "1.0.0"','versionName "W3"')
+          t=t.replace('versionCode 1','versionCode 34')
+          t=t.replace("versionName '1.0.0'","versionName 'W4'")
+          t=t.replace('versionName "1.0.0"','versionName "W4"')
           p.write_text(t,encoding='utf-8')
           PY
 
@@ -66,7 +66,7 @@ jobs:
           grep -q 'R.drawable.w2_header_reference' w2/MainActivity.java
           ! grep -q 'MASOUD Raja Bot' w2/MainActivity.java
           ! grep -q 'tabPassengers' w2/MainActivity.java
-          grep -q 'section("مسافران")' w2/MainActivity.java
+          grep -q 'showPassengerDialog()' w2/MainActivity.java
           grep -q 'new WebView(this)' w2/MainActivity.java
           grep -q 'injectLogin()' w2/MainActivity.java
           grep -q 'injectSearchForm()' w2/MainActivity.java
@@ -87,10 +87,10 @@ jobs:
           test -s "$APK"
           unzip -t "$APK" >/dev/null
           mkdir -p "$GITHUB_WORKSPACE/output"
-          cp "$APK" "$GITHUB_WORKSPACE/output/w3.apk"
+          cp "$APK" "$GITHUB_WORKSPACE/output/w4.apk"
 
       - uses: actions/upload-artifact@v4
         with:
-          name: w3
+          name: w4
           path: output/w3.apk
           if-no-files-found: error
