@@ -6,7 +6,7 @@ on:
     paths:
       - '.github/workflows/w2-build.yml'
       - 'w2/MainActivity.java'
-      - 'w2/header_reference.b64'
+      - 'w2/header_parts_v2/**'
 
 jobs:
   build:
@@ -36,7 +36,7 @@ jobs:
           python3 - <<'PY'
           import base64
           from pathlib import Path
-          source = Path('w2/header_reference.b64').read_text(encoding='utf-8')
+          source = ''.join(p.read_text(encoding='utf-8') for p in sorted(Path('w2/header_parts_v2').glob('part_*.b64')))
           clean = ''.join(ch for ch in source if ch.isalnum() or ch in '+/=')
           clean += '=' * (-len(clean) % 4)
           image = base64.b64decode(clean, validate=False)
