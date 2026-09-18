@@ -16,8 +16,11 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
 import android.text.InputType;
+import android.text.Editable;
+import android.text.TextWatcher;
 import android.view.Gravity;
 import android.view.View;
+import android.view.ViewGroup;
 import android.view.WindowManager;
 import android.webkit.JavascriptInterface;
 import android.webkit.WebChromeClient;
@@ -58,6 +61,11 @@ public class MainActivity extends Activity {
     private boolean reserved = false;
     private boolean alarmPlayed = false;
     private boolean reauthRequired = false;
+    private boolean logoutInProgress = false;
+    private boolean loginInProgress = false;
+    private int loginRetryCount = 0;
+    private String lastFinishedUrl = "";
+    private long lastFinishedAt = 0L;
     private int actionState = 0;
     private Uri selectedAlarmUri;
     private long nextRefreshAt = 0L;
@@ -88,7 +96,12 @@ public class MainActivity extends Activity {
     private AutoCompleteTextView stationField(String hint){
         AutoCompleteTextView e=new AutoCompleteTextView(this); e.setHint(hint); e.setHintTextColor(MUTED); e.setTextColor(TEXT); e.setTextSize(16); e.setSingleLine(true); e.setGravity(Gravity.RIGHT|Gravity.CENTER_VERTICAL); e.setBackground(bg(FIELD,14,BORDER,1)); e.setPadding(dp(13),dp(8),dp(13),dp(8)); e.setThreshold(0);
         String[] cities={"تهران","مشهد","قم","اصفهان","شیراز","تبریز","اهواز","کرمان","یزد","رشت","ساری","کرج","قزوین","اراک","بندرعباس","زنجان","همدان","گرگان","شاهرود","نیشابور","سبزوار","طبس","کاشان","اندیمشک","خرمشهر"};
-        ArrayAdapter<String> a=new ArrayAdapter<>(this,android.R.layout.simple_dropdown_item_1line,cities); e.setAdapter(a); e.setOnClickListener(v->e.showDropDown()); e.setOnFocusChangeListener((v,has)->{if(has)e.showDropDown();}); return e;
+        ArrayAdapter<String> a=new ArrayAdapter<String>(this,android.R.layout.simple_dropdown_item_1line,cities){
+            private View style(View v){ TextView t=(TextView)v; t.setTextColor(TEXT); t.setTextSize(17); t.setTypeface(null,1); t.setGravity(Gravity.RIGHT|Gravity.CENTER_VERTICAL); t.setPadding(dp(18),dp(12),dp(18),dp(12)); t.setBackgroundColor(PANEL); return t; }
+            @Override public View getView(int position,View convertView,ViewGroup parent){ return style(super.getView(position,convertView,parent)); }
+            @Override public View getDropDownView(int position,View convertView,ViewGroup parent){ return style(super.getDropDownView(position,convertView,parent)); }
+        };
+        e.setAdapter(a); e.setDropDownBackgroundDrawable(bg(PANEL,12,BORDER,1)); e.setOnClickListener(v->e.showDropDown()); e.setOnFocusChangeListener((v,has)->{if(has)e.showDropDown();}); return e;
     }
     private Button button(String text, int color) {
         Button b = new Button(this); b.setText(text); b.setTextColor(color==PANEL_2?TEXT:Color.WHITE); b.setTextSize(15); b.setAllCaps(false); b.setBackground(bg(color,14,color,0)); b.setMinHeight(dp(48)); b.setPadding(dp(8),0,dp(8),0); return b;
@@ -108,7 +121,7 @@ public class MainActivity extends Activity {
         referenceHeader.setAdjustViewBounds(false);
         headerFrame.addView(referenceHeader,new FrameLayout.LayoutParams(-1,-1));
         TextView version = new TextView(this);
-        version.setText("W6");
+        version.setText("W7");
         version.setTextColor(Color.BLACK);
         version.setTextSize(18);
         version.setTypeface(null,1);
@@ -154,7 +167,7 @@ public class MainActivity extends Activity {
         passengerSummary.setOnClickListener(v->showPassengerDialog());
         p.addView(passengerSummary,new LinearLayout.LayoutParams(-1,dp(58))); gap(p,9);
         LinearLayout search=section("تنظیمات جستجو"); trainNumber=field("شماره قطار"); trainNumber.setInputType(InputType.TYPE_CLASS_NUMBER); search.addView(trainNumber); gap(search,7);
-        priceMode=new CheckBox(this); priceMode.setText("جستجو با بازه قیمت"); priceMode.setTextColor(TEXT); priceMode.setButtonTintList(ColorStateList.valueOf(BLUE)); search.addView(priceMode); minPrice=field("از قیمت (ریال)"); minPrice.setInputType(InputType.TYPE_CLASS_NUMBER); maxPrice=field("تا قیمت (ریال)"); maxPrice.setInputType(InputType.TYPE_CLASS_NUMBER); search.addView(minPrice); gap(search,6); search.addView(maxPrice); gap(search,7);
+        priceMode=new CheckBox(this); priceMode.setText("جستجو با بازه قیمت"); priceMode.setTextColor(TEXT); priceMode.setButtonTintList(ColorStateList.valueOf(BLUE)); search.addView(priceMode); minPrice=field("از قیمت (ریال)"); minPrice.setInputType(InputType.TYPE_CLASS_NUMBER); maxPrice=field("تا قیمت (ریال)"); maxPrice.setInputType(InputType.TYPE_CLASS_NUMBER); enablePriceFormatting(minPrice); enablePriceFormatting(maxPrice); search.addView(minPrice); gap(search,6); search.addView(maxPrice); gap(search,7);
         coupe=new CheckBox(this); coupe.setText("فقط کوپه دربست"); coupe.setTextColor(TEXT); coupe.setButtonTintList(ColorStateList.valueOf(BLUE)); alarm=new CheckBox(this); alarm.setText("آلارم صوتی پیدا شدن بلیت"); alarm.setTextColor(TEXT); alarm.setTypeface(null,1); alarm.setButtonTintList(ColorStateList.valueOf(BLUE)); alarm.setChecked(true); search.addView(coupe); search.addView(alarm); Button alarmTone=button("♫ انتخاب صدای آلارم",PANEL_2); alarmTone.setTextColor(TEXT); alarmTone.setOnClickListener(v->chooseAlarmTone()); search.addView(alarmTone,new LinearLayout.LayoutParams(-1,dp(46))); p.addView(search); gap(p,9);
         LinearLayout live=section("کنترل زنده"); LinearLayout rr=new LinearLayout(this); rr.setOrientation(LinearLayout.HORIZONTAL); rr.setGravity(Gravity.CENTER_VERTICAL); Button refreshIcon=button("↻",BLUE); refresh=field("رفرش"); refresh.setText("2"); refresh.setFocusable(false); refresh.setGravity(Gravity.CENTER); TextView sec=label("ثانیه"); sec.setGravity(Gravity.CENTER); View.OnClickListener openRefresh=v->showRefreshMenu(refreshIcon); refreshIcon.setOnClickListener(openRefresh); refresh.setOnClickListener(openRefresh); rr.addView(refreshIcon,new LinearLayout.LayoutParams(dp(58),dp(50))); gapH(rr,7); rr.addView(refresh,new LinearLayout.LayoutParams(dp(76),dp(50))); rr.addView(sec,new LinearLayout.LayoutParams(dp(65),dp(50))); live.addView(rr); p.addView(live); gap(p,9);
         LinearLayout account=section("حساب رجا"); phone=field("شماره موبایل حساب رجا"); phone.setInputType(InputType.TYPE_CLASS_PHONE); password=field("رمز عبور"); password.setInputType(InputType.TYPE_CLASS_TEXT|InputType.TYPE_TEXT_VARIATION_PASSWORD); account.addView(phone); gap(account,8); account.addView(password); p.addView(account); gap(p,9);
@@ -278,7 +291,7 @@ public class MainActivity extends Activity {
 
     private void setupWebView(){
         WebSettings s=webView.getSettings(); s.setJavaScriptEnabled(true); s.setDomStorageEnabled(true); s.setLoadsImagesAutomatically(true); s.setJavaScriptCanOpenWindowsAutomatically(true); s.setUserAgentString(s.getUserAgentString()+" MASOUD-Android/1.0");
-        webView.addJavascriptInterface(new JsBridge(),"MasoudBridge"); webView.setWebChromeClient(new WebChromeClient()); webView.setWebViewClient(new WebViewClient(){ @Override public void onPageFinished(WebView v,String url){ log("صفحه باز شد: "+url); if(running) handler.postDelayed(()->advanceAutomation(),500); } });
+        webView.addJavascriptInterface(new JsBridge(),"MasoudBridge"); webView.setWebChromeClient(new WebChromeClient()); webView.setWebViewClient(new WebViewClient(){ @Override public void onPageFinished(WebView v,String url){ long now=System.currentTimeMillis(); if(url.equals(lastFinishedUrl)&&now-lastFinishedAt<1200)return; lastFinishedUrl=url; lastFinishedAt=now; log("صفحه باز شد: "+url); if(running) handler.postDelayed(()->advanceAutomation(),900); } });
         webView.loadUrl("https://www.raja.ir/");
     }
 
@@ -287,7 +300,7 @@ public class MainActivity extends Activity {
         if(origin.getText().toString().trim().isEmpty()||destination.getText().toString().trim().isEmpty()||travelDate.getText().toString().trim().isEmpty()){ toast("مبدا، مقصد و تاریخ را کامل کن."); return; }
         if(phone.getText().toString().trim().isEmpty()||password.getText().toString().trim().isEmpty()){ toast("حساب رجا را وارد کن."); return; }
         if(!priceMode.isChecked() && trainNumber.getText().toString().trim().isEmpty()){ toast("شماره قطار را وارد کن یا حالت بازه قیمت را فعال کن."); return; }
-        saveAccount(); running=true; actionState=1; reauthRequired=true; loggedIn=false; searchSubmitted=false; reserved=false; alarmPlayed=false; updateActionButtons(); status.setText("● فرمان شروع ثبت شد؛ در حال اجرا..."); status.setTextColor(Color.rgb(0,130,75)); logView.setText(""); log("شروع اجرا | "+origin.getText()+" ← "+destination.getText()+" | "+travelDate.getText());
+        saveAccount(); running=true; actionState=1; reauthRequired=true; logoutInProgress=false; loginInProgress=false; loginRetryCount=0; loggedIn=false; searchSubmitted=false; reserved=false; alarmPlayed=false; updateActionButtons(); status.setText("● فرمان شروع ثبت شد؛ در حال اجرا..."); status.setTextColor(Color.rgb(0,130,75)); logView.setText(""); log("شروع اجرا | "+origin.getText()+" ← "+destination.getText()+" | "+travelDate.getText());
         if(!webView.getUrl().startsWith("https://www.raja.ir")) webView.loadUrl("https://www.raja.ir/"); else webView.loadUrl("https://www.raja.ir/"); startMonitorLoop();
     }
     private void stopBot(String why){ running=false; actionState=2; if(monitorRunnable!=null) handler.removeCallbacks(monitorRunnable); updateActionButtons(); status.setText("■ "+why); status.setTextColor(RED); log(why); }
@@ -297,21 +310,22 @@ public class MainActivity extends Activity {
 
     private void advanceAutomation(){
         if(!running) return; String url=webView.getUrl()==null?"":webView.getUrl();
-        if(reauthRequired){ injectLogout(); return; }
+        if(reauthRequired){ if(!logoutInProgress)injectLogout(); return; }
         if(url.contains("registerticket")){ reserved=true; status.setText("● وارد صفحه مشخصات مسافر شد."); log("رزرو و ادامه خرید انجام شد؛ صفحه مشخصات مسافر باز شد."); showPanel(browserPanel); if(alarm.isChecked()) playAlarmOnce(); return; }
-        if(!loggedIn){ injectLogin(); return; }
+        if(!loggedIn){ if(!loginInProgress)injectLogin(); return; }
         if(!searchSubmitted){ injectSearchForm(); return; }
         inspectResultsAndReserve();
     }
 
     private void injectLogout(){
-        log("خروج از نشست قبلی رجا...");
-        String js="(function(){try{const t=s=>(s||'').trim();let all=[...document.querySelectorAll('button,a,span,div')].filter(x=>x.offsetParent!==null);let account=all.find(x=>t(x.innerText).includes('حساب کاربری')||t(x.innerText).includes('پروفایل'));if(account)account.click();setTimeout(()=>{let els=[...document.querySelectorAll('button,a,span,div')].filter(x=>x.offsetParent!==null);let out=els.find(x=>t(x.innerText)==='خروج')||els.find(x=>t(x.innerText).includes('خروج از حساب'));if(out)out.click();setTimeout(()=>MasoudBridge.logoutDone(),700);},450);}catch(e){MasoudBridge.log('خطای خروج: '+e);MasoudBridge.logoutDone();}})();";
+        if(logoutInProgress)return; logoutInProgress=true; log("خروج از نشست قبلی رجا...");
+        String js="(function(){try{const t=s=>(s||'').replace(/\\s+/g,' ').trim();let all=[...document.querySelectorAll('button,a,[role=button],span,div')].filter(x=>x.offsetParent!==null);let account=all.find(x=>/حساب کاربری|پروفایل|کاربری/.test(t(x.innerText)));if(account)account.click();setTimeout(()=>{let els=[...document.querySelectorAll('button,a,[role=button],span,div')].filter(x=>x.offsetParent!==null);let out=els.find(x=>/^خروج$/.test(t(x.innerText)))||els.find(x=>/خروج از حساب/.test(t(x.innerText)));if(out)out.click();setTimeout(()=>MasoudBridge.logoutDone(),900);},650);}catch(e){MasoudBridge.log('خطای خروج: '+e);MasoudBridge.logoutDone();}})();";
         webView.evaluateJavascript(js,null);
     }
 
     private void injectLogin(){
-        String js="(function(){try{const txt=s=>(s||'').trim();const els=[...document.querySelectorAll('button,a,span,div')];let op=els.find(e=>txt(e.innerText)==='ورود / عضویت')||els.find(e=>txt(e.innerText).includes('ورود / عضویت'));if(op){op.click();setTimeout(()=>{let ins=[...document.querySelectorAll('input')].filter(x=>x.offsetParent!==null);if(ins.length>=2){ins[0].focus();ins[0].value="+q(phone.getText().toString())+";ins[0].dispatchEvent(new Event('input',{bubbles:true}));ins[1].focus();ins[1].value="+q(password.getText().toString())+";ins[1].dispatchEvent(new Event('input',{bubbles:true}));let bs=[...document.querySelectorAll('button')].filter(x=>x.offsetParent!==null);let b=bs.find(x=>txt(x.innerText)==='ورود')||bs.find(x=>txt(x.innerText).includes('ورود'));if(b){b.click();MasoudBridge.loginClicked();}else MasoudBridge.log('دکمه ورود پیدا نشد');}else MasoudBridge.log('فیلدهای ورود پیدا نشد');},700);return 'opening';}MasoudBridge.log('ورود/عضویت پیدا نشد');return 'missing';}catch(e){MasoudBridge.log('خطای ورود: '+e);return 'error';}})();";
+        if(loginInProgress)return; loginInProgress=true;
+        String js="(function(){try{const txt=s=>(s||'').replace(/\\s+/g,' ').trim();const vis=e=>e&&e.offsetParent!==null;let els=[...document.querySelectorAll('button,a,[role=button],span,div')].filter(vis);let op=els.find(e=>{let t=txt(e.innerText);return t.includes('ورود')&&(t.includes('عضویت')||t.includes('ثبت نام')||t.includes('ثبت‌نام'));})||document.querySelector('a[href*=login],a[href*=signin],button[aria-label*=ورود],[title*=ورود]')||els.find(e=>txt(e.innerText)==='ورود');if(!op){MasoudBridge.loginMissing();return 'missing';}op.click();setTimeout(()=>{let ins=[...document.querySelectorAll('input')].filter(vis);let phone=ins.find(x=>x.type==='tel'||/موبایل|تلفن/.test((x.placeholder||'')+(x.name||'')))||ins.find(x=>x.type!=='password');let pass=ins.find(x=>x.type==='password'||/رمز/.test((x.placeholder||'')+(x.name||'')));if(!phone||!pass){MasoudBridge.loginMissing();return;}const fire=(x)=>{x.dispatchEvent(new Event('input',{bubbles:true}));x.dispatchEvent(new Event('change',{bubbles:true}));};phone.focus();phone.value="+q(phone.getText().toString())+";fire(phone);pass.focus();pass.value="+q(password.getText().toString())+";fire(pass);let bs=[...document.querySelectorAll('button,[role=button],input[type=submit]')].filter(vis);let b=bs.find(x=>txt(x.innerText||x.value)==='ورود')||bs.find(x=>txt(x.innerText||x.value).includes('ورود'));if(b){b.click();MasoudBridge.loginClicked();}else MasoudBridge.loginMissing();},1200);return 'opening';}catch(e){MasoudBridge.log('خطای ورود: '+e);MasoudBridge.loginMissing();return 'error';}})();";
         webView.evaluateJavascript(js,null);
     }
 
@@ -325,6 +339,14 @@ public class MainActivity extends Activity {
         String min=digitsOnly(minPrice.getText().toString()), max=digitsOnly(maxPrice.getText().toString()), wanted=digitsOnly(trainNumber.getText().toString());
         String js="(function(){try{const ds=s=>String(s||'').replace(/[^0-9۰-۹٠-٩]/g,'').replace(/[۰-۹]/g,d=>'۰۱۲۳۴۵۶۷۸۹'.indexOf(d)).replace(/[٠-٩]/g,d=>'٠١٢٣٤٥٦٧٨٩'.indexOf(d));let buttons=[...document.querySelectorAll('button')].filter(b=>b.offsetParent!==null&&(b.innerText||'').includes('رزرو بلیت'));MasoudBridge.log('پاسخ رجا: '+buttons.length+' دکمه رزرو دیده شد');for(let b of buttons){let card=b.closest('div.train-result')||b.closest('.train-result');if(!card)continue;let priceEl=card.querySelector('span.price');let price=priceEl?Number(ds(priceEl.textContent)):0;let timeline=card.querySelector('app-timeline');let tn='';if(timeline){tn=ds(timeline.getAttribute('data-trainnumber-to')||timeline.getAttribute('data-trainnumber-from')||'');}if(!tn){let m=(card.innerText||'').match(/شماره\\s*قطار\\s*[:：]?\\s*([0-9۰-۹٠-٩]+)/);if(m)tn=ds(m[1]);}MasoudBridge.log('کارت: قطار='+tn+' | قیمت='+price);let match="+(priceMode.isChecked()?"(("+(min.isEmpty()?"true":"price>=Number('"+min+"')")+")&&("+(max.isEmpty()?"true":"price<=Number('"+max+"')")+"))":"tn==='"+wanted+"'")+";if(match){b.click();MasoudBridge.reserveClicked();setTimeout(()=>{let c=[...document.querySelectorAll('button')].find(x=>(x.innerText||'').trim()==='ادامه خرید');if(c){c.click();MasoudBridge.continueClicked();}else MasoudBridge.log('رزرو زده شد ولی ادامه خرید پیدا نشد');},900);return 'reserved';}}MasoudBridge.notFound();return 'none';}catch(e){MasoudBridge.log('خطای بررسی نتیجه: '+e);return 'error';}})();";
         webView.evaluateJavascript(js,null);
+    }
+
+    private void enablePriceFormatting(EditText field){
+        field.addTextChangedListener(new TextWatcher(){ boolean editing=false;
+            @Override public void beforeTextChanged(CharSequence text,int start,int count,int after){}
+            @Override public void onTextChanged(CharSequence text,int start,int before,int count){}
+            @Override public void afterTextChanged(Editable value){ if(editing)return; String digits=digitsOnly(value.toString()); editing=true; if(digits.isEmpty())field.setText(""); else{ try{ field.setText(String.format(Locale.US,"%,d",Long.parseLong(digits))); }catch(Exception e){ field.setText(digits); } } field.setSelection(field.getText().length()); editing=false; }
+        });
     }
 
     private int parseInt(String s,int def){ try{return Math.max(0,Integer.parseInt(s.trim()));}catch(Exception e){return def;} }
@@ -341,8 +363,9 @@ public class MainActivity extends Activity {
 
     private class JsBridge {
         @JavascriptInterface public void log(String m){ MainActivity.this.log(m); }
-        @JavascriptInterface public void logoutDone(){ runOnUiThread(()->{ reauthRequired=false; loggedIn=false; log("خروج انجام شد؛ ورود مجدد..."); webView.loadUrl("https://www.raja.ir/"); }); }
-        @JavascriptInterface public void loginClicked(){ runOnUiThread(()->{ loggedIn=true; log("دکمه ورود زده شد؛ منتظر تکمیل ورود..."); handler.postDelayed(()->advanceAutomation(),2600); }); }
+        @JavascriptInterface public void logoutDone(){ runOnUiThread(()->{ if(!reauthRequired)return; reauthRequired=false; logoutInProgress=false; loggedIn=false; loginInProgress=false; log("خروج انجام شد؛ ورود مجدد..."); webView.loadUrl("https://www.raja.ir/"); }); }
+        @JavascriptInterface public void loginMissing(){ runOnUiThread(()->{ loginInProgress=false; loginRetryCount++; if(loginRetryCount<=5){ log("ورود/عضویت پیدا نشد؛ تلاش مجدد "+loginRetryCount+" از ۵"); handler.postDelayed(()->advanceAutomation(),1500); }else{ stopBot("ورود به حساب رجا انجام نشد"); } }); }
+        @JavascriptInterface public void loginClicked(){ runOnUiThread(()->{ loginInProgress=false; loggedIn=true; loginRetryCount=0; log("دکمه ورود زده شد؛ منتظر تکمیل ورود..."); handler.postDelayed(()->advanceAutomation(),3000); }); }
         @JavascriptInterface public void searchClicked(){ runOnUiThread(()->{ searchSubmitted=true; nextRefreshAt=System.currentTimeMillis()+(long)(getRefreshSeconds()*1000); log("جستجو ارسال شد؛ پایش مداوم فعال است."); handler.postDelayed(()->advanceAutomation(),1300); }); }
         @JavascriptInterface public void reserveClicked(){ runOnUiThread(()->{ reserved=true; status.setText("● بلیت پیدا شد؛ رزرو زده شد..."); log("رزرو بلیت کلیک شد."); showPanel(browserPanel); if(alarm.isChecked()) playAlarmOnce(); }); }
         @JavascriptInterface public void continueClicked(){ runOnUiThread(()->log("ادامه خرید کلیک شد.")); }
