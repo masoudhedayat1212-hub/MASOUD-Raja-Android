@@ -1,4 +1,4 @@
-name: W5 Build
+name: W6 Build
 
 on:
   workflow_dispatch:
@@ -19,7 +19,7 @@ jobs:
           distribution: temurin
           java-version: '17'
 
-      - name: Prepare W5 from W4 verified reference
+      - name: Prepare W6 from W4 verified reference
         shell: bash
         run: |
           set -euo pipefail
@@ -46,9 +46,21 @@ jobs:
           PY
           test -s "$APP/app/src/main/res/drawable-nodpi/w2_header_reference.jpg"
           file "$APP/app/src/main/res/drawable-nodpi/w2_header_reference.jpg"
-          cp "$APP/app/src/main/res/drawable-nodpi/w2_header_reference.jpg" "$APP/app/src/main/res/drawable-nodpi/app_icon.jpg"
-          sed -i 's#android:icon="@mipmap/ic_launcher"#android:icon="@drawable/app_icon"#' "$APP/app/src/main/AndroidManifest.xml"
-          sed -i 's#android:roundIcon="@mipmap/ic_launcher_round"#android:roundIcon="@drawable/app_icon"#' "$APP/app/src/main/AndroidManifest.xml"
+          cp "$APP/app/src/main/res/drawable-nodpi/w2_header_reference.jpg" "$APP/app/src/main/res/drawable-nodpi/w6_train_icon.jpg"
+          python3 - <<'PY'
+          import re
+          from pathlib import Path
+          p=Path('buildsrc/MASOUD_Android/app/src/main/AndroidManifest.xml')
+          t=p.read_text(encoding='utf-8')
+          t=re.sub(r'android:icon="[^"]+"','android:icon="@drawable/w6_train_icon"',t)
+          if 'android:roundIcon=' in t:
+              t=re.sub(r'android:roundIcon="[^"]+"','android:roundIcon="@drawable/w6_train_icon"',t)
+          else:
+              t=t.replace('<application ','<application android:roundIcon="@drawable/w6_train_icon" ',1)
+          p.write_text(t,encoding='utf-8')
+          PY
+          grep -q 'android:icon="@drawable/w6_train_icon"' "$APP/app/src/main/AndroidManifest.xml"
+          grep -q 'android:roundIcon="@drawable/w6_train_icon"' "$APP/app/src/main/AndroidManifest.xml"
 
           python3 - <<'PY'
           from pathlib import Path
@@ -56,9 +68,9 @@ jobs:
           t=p.read_text(encoding='utf-8')
           t=t.replace("applicationId 'com.masoud.raja'","applicationId 'com.masoud.raja.w2real'")
           t=t.replace('applicationId "com.masoud.raja"','applicationId "com.masoud.raja.w2real"')
-          t=t.replace('versionCode 1','versionCode 35')
-          t=t.replace("versionName '1.0.0'","versionName 'W5'")
-          t=t.replace('versionName "1.0.0"','versionName "W5"')
+          t=t.replace('versionCode 1','versionCode 36')
+          t=t.replace("versionName '1.0.0'","versionName 'W6'")
+          t=t.replace('versionName "1.0.0"','versionName "W6"')
           p.write_text(t,encoding='utf-8')
           PY
 
@@ -70,6 +82,9 @@ jobs:
           ! grep -q 'MASOUD Raja Bot' w2/MainActivity.java
           ! grep -q 'tabPassengers' w2/MainActivity.java
           grep -q 'showPassengerDialog()' w2/MainActivity.java
+          grep -q 'version.setText("W6")' w2/MainActivity.java
+          ! grep -q 'نوزاد' w2/MainActivity.java
+          grep -q 'jalaliToGregorian' w2/MainActivity.java
           grep -q 'new WebView(this)' w2/MainActivity.java
           grep -q 'injectLogin()' w2/MainActivity.java
           grep -q 'injectSearchForm()' w2/MainActivity.java
@@ -90,10 +105,10 @@ jobs:
           test -s "$APK"
           unzip -t "$APK" >/dev/null
           mkdir -p "$GITHUB_WORKSPACE/output"
-          cp "$APK" "$GITHUB_WORKSPACE/output/w5.apk"
+          cp "$APK" "$GITHUB_WORKSPACE/output/w6.apk"
 
       - uses: actions/upload-artifact@v4
         with:
-          name: w5
-          path: output/w5.apk
+          name: w6
+          path: output/w6.apk
           if-no-files-found: error
