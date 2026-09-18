@@ -1,4 +1,4 @@
-name: W8 Build
+name: W9 Build
 
 permissions:
   contents: write
@@ -23,7 +23,7 @@ jobs:
           distribution: temurin
           java-version: '17'
 
-      - name: Prepare W8 from W4 verified reference
+      - name: Prepare W9 from W4 verified reference
         shell: bash
         run: |
           set -euo pipefail
@@ -58,20 +58,20 @@ jobs:
           clean += '=' * (-len(clean) % 4)
           image = base64.b64decode(clean, validate=False)
           if image[:3] != bytes((255, 216, 255)):
-              raise SystemExit('Invalid W8 icon JPEG')
-          Path('buildsrc/MASOUD_Android/app/src/main/res/drawable-nodpi/w8_train_icon_source.jpg').write_bytes(image)
+              raise SystemExit('Invalid W9 icon JPEG')
+          Path('buildsrc/MASOUD_Android/app/src/main/res/drawable-nodpi/w9_train_icon_source.jpg').write_bytes(image)
           PY
-          test -s "$APP/app/src/main/res/drawable-nodpi/w8_train_icon_source.jpg"
-          file "$APP/app/src/main/res/drawable-nodpi/w8_train_icon_source.jpg"
+          test -s "$APP/app/src/main/res/drawable-nodpi/w9_train_icon_source.jpg"
+          file "$APP/app/src/main/res/drawable-nodpi/w9_train_icon_source.jpg"
           python3 -m pip install --quiet pillow
           python3 - <<'PY'
           from PIL import Image, ImageOps
           from pathlib import Path
-          src=Image.open('buildsrc/MASOUD_Android/app/src/main/res/drawable-nodpi/w8_train_icon_source.jpg').convert('RGB')
+          src=Image.open('buildsrc/MASOUD_Android/app/src/main/res/drawable-nodpi/w9_train_icon_source.jpg').convert('RGB')
           icon=ImageOps.fit(src,(512,512),method=Image.Resampling.LANCZOS,centering=(0.43,0.5))
-          icon.save('buildsrc/MASOUD_Android/app/src/main/res/drawable-nodpi/w8_train_icon.png',optimize=True)
+          icon.save('buildsrc/MASOUD_Android/app/src/main/res/drawable-nodpi/w9_train_icon.png',optimize=True)
           PY
-          test -s "$APP/app/src/main/res/drawable-nodpi/w8_train_icon.png"
+          test -s "$APP/app/src/main/res/drawable-nodpi/w9_train_icon.png"
           python3 - <<'PY'
           import re
           from pathlib import Path
@@ -79,11 +79,11 @@ jobs:
           t=p.read_text(encoding='utf-8')
           t=re.sub(r'\s+android:icon="[^"]*"','',t)
           t=re.sub(r'\s+android:roundIcon="[^"]*"','',t)
-          t=t.replace('<application','<application android:icon="@drawable/w8_train_icon" android:roundIcon="@drawable/w8_train_icon"',1)
+          t=t.replace('<application','<application android:icon="@drawable/w9_train_icon" android:roundIcon="@drawable/w9_train_icon"',1)
           p.write_text(t,encoding='utf-8')
           PY
-          grep -q 'android:icon="@drawable/w8_train_icon"' "$APP/app/src/main/AndroidManifest.xml"
-          grep -q 'android:roundIcon="@drawable/w8_train_icon"' "$APP/app/src/main/AndroidManifest.xml"
+          grep -q 'android:icon="@drawable/w9_train_icon"' "$APP/app/src/main/AndroidManifest.xml"
+          grep -q 'android:roundIcon="@drawable/w9_train_icon"' "$APP/app/src/main/AndroidManifest.xml"
 
           python3 - <<'PY'
           from pathlib import Path
@@ -91,9 +91,9 @@ jobs:
           t=p.read_text(encoding='utf-8')
           t=t.replace("applicationId 'com.masoud.raja'","applicationId 'com.masoud.raja.w2real'")
           t=t.replace('applicationId "com.masoud.raja"','applicationId "com.masoud.raja.w2real"')
-          t=t.replace('versionCode 1','versionCode 38')
-          t=t.replace("versionName '1.0.0'","versionName 'W8'")
-          t=t.replace('versionName "1.0.0"','versionName "W8"')
+          t=t.replace('versionCode 1','versionCode 39')
+          t=t.replace("versionName '1.0.0'","versionName 'W9'")
+          t=t.replace('versionName "1.0.0"','versionName "W9"')
           p.write_text(t,encoding='utf-8')
           PY
 
@@ -105,13 +105,17 @@ jobs:
           ! grep -q 'MASOUD Raja Bot' w2/MainActivity.java
           ! grep -q 'tabPassengers' w2/MainActivity.java
           grep -q 'showPassengerDialog()' w2/MainActivity.java
-          grep -q 'version.setText("W8")' w2/MainActivity.java
+          grep -q 'version.setText("W9")' w2/MainActivity.java
           ! grep -q 'نوزاد' w2/MainActivity.java
           grep -q 'jalaliToGregorian' w2/MainActivity.java
           grep -q 'DAY_OF_WEEK)%7' w2/MainActivity.java
           grep -q "تعداد بزرگسال و کودک در رجا تنظیم شد" w2/MainActivity.java
           grep -q 'enablePriceFormatting' w2/MainActivity.java
           grep -q 'loginMissing' w2/MainActivity.java
+          grep -q 'MutationObserver' w2/MainActivity.java
+          grep -q 'پاک‌کردن لاگ' w2/MainActivity.java
+          grep -q 'refreshSlider' w2/MainActivity.java
+          grep -q 'selectionError' w2/MainActivity.java
           grep -q 'setDropDownBackgroundDrawable' w2/MainActivity.java
           grep -q 'new WebView(this)' w2/MainActivity.java
           grep -q 'injectLogin()' w2/MainActivity.java
@@ -133,25 +137,25 @@ jobs:
           test -s "$APK"
           unzip -t "$APK" >/dev/null
           mkdir -p "$GITHUB_WORKSPACE/output"
-          cp "$APK" "$GITHUB_WORKSPACE/output/w8.apk"
+          cp "$APK" "$GITHUB_WORKSPACE/output/w9.apk"
 
-      - name: Save W8 APK in repository
+      - name: Save W9 APK in repository
         shell: bash
         run: |
           set -euo pipefail
           mkdir -p releases
-          cp output/w8.apk releases/MASOUD_Raja_W8.apk
+          cp output/w9.apk releases/MASOUD_Raja_W9.apk
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add -f releases/MASOUD_Raja_W8.apk
+          git add -f releases/MASOUD_Raja_W9.apk
           if git diff --cached --quiet; then
             exit 0
           fi
-          git commit -m "Save installable W8 APK"
+          git commit -m "Save installable W9 APK"
           git push
 
       - uses: actions/upload-artifact@v4
         with:
-          name: w8
-          path: output/w8.apk
+          name: w9
+          path: output/w9.apk
           if-no-files-found: error
