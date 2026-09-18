@@ -46,7 +46,7 @@ public class MainActivity extends Activity {
 
     private final Handler handler = new Handler(Looper.getMainLooper());
     private WebView webView;
-    private EditText phone, password, origin, destination, travelDate, trainNumber, minPrice, maxPrice, adults, children, infants, refresh;
+    private EditText phone, password, origin, destination, travelDate, trainNumber, minPrice, maxPrice, adults, children, refresh;
     private String passengerType = "normal";
     private CheckBox priceMode, coupe, alarm;
     private TextView status, logView, passengerSummary;
@@ -108,7 +108,7 @@ public class MainActivity extends Activity {
         referenceHeader.setAdjustViewBounds(false);
         headerFrame.addView(referenceHeader,new FrameLayout.LayoutParams(-1,-1));
         TextView version = new TextView(this);
-        version.setText("W5");
+        version.setText("W6");
         version.setTextColor(Color.BLACK);
         version.setTextSize(18);
         version.setTypeface(null,1);
@@ -147,7 +147,6 @@ public class MainActivity extends Activity {
         LinearLayout drow=new LinearLayout(this); drow.setOrientation(LinearLayout.HORIZONTAL); drow.setGravity(Gravity.CENTER_VERTICAL); travelDate=field("تاریخ رفت"); travelDate.setFocusable(false); travelDate.setCompoundDrawablesWithIntrinsicBounds(0,0,android.R.drawable.ic_menu_my_calendar,0); travelDate.setOnClickListener(v->showPersianCalendar()); drow.addView(travelDate,new LinearLayout.LayoutParams(-1,dp(54))); route.addView(drow); p.addView(route); gap(p,9);
         adults=field(""); adults.setText("1"); adults.setFocusable(false);
         children=field(""); children.setText("0"); children.setFocusable(false);
-        infants=field(""); infants.setText("0"); infants.setFocusable(false);
         passengerSummary=label("مسافران     ۱ مسافر");
         passengerSummary.setTextSize(17); passengerSummary.setTypeface(null,1); passengerSummary.setGravity(Gravity.RIGHT|Gravity.CENTER_VERTICAL);
         passengerSummary.setPadding(dp(16),dp(8),dp(16),dp(8)); passengerSummary.setBackground(bg(FIELD,14,BORDER,1));
@@ -169,13 +168,12 @@ public class MainActivity extends Activity {
     }
 
     private void showPassengerDialog(){
-        final int[] counts={parseInt(adults.getText().toString(),1),parseInt(children.getText().toString(),0),parseInt(infants.getText().toString(),0)};
+        final int[] counts={parseInt(adults.getText().toString(),1),parseInt(children.getText().toString(),0)};
         LinearLayout box=new LinearLayout(this); box.setOrientation(LinearLayout.VERTICAL); box.setPadding(dp(16),dp(8),dp(16),dp(14)); box.setBackgroundColor(PANEL);
         TextView title=label("مسافران"); title.setTextSize(20); title.setTypeface(null,1); box.addView(title,new LinearLayout.LayoutParams(-1,dp(48)));
-        TextView[] values={new TextView(this),new TextView(this),new TextView(this)};
+        TextView[] values={new TextView(this),new TextView(this)};
         box.addView(makeDialogPassengerRow("بزرگسال (۱۲ سال به بالا)",0,counts,values)); gap(box,6);
-        box.addView(makeDialogPassengerRow("کودک (۲ تا ۱۲ سال)",1,counts,values)); gap(box,6);
-        box.addView(makeDialogPassengerRow("نوزاد (۱۰ روز تا ۲ سال)",2,counts,values));
+        box.addView(makeDialogPassengerRow("کودک (۲ تا ۱۲ سال)",1,counts,values));
         TextView limit=label("ⓘ حداکثر تعداد مسافران ۶ نفر است."); limit.setTextColor(RED); limit.setGravity(Gravity.CENTER); box.addView(limit,new LinearLayout.LayoutParams(-1,dp(44)));
         View line=new View(this); line.setBackgroundColor(BORDER); box.addView(line,new LinearLayout.LayoutParams(-1,dp(1)));
         RadioGroup group=new RadioGroup(this); group.setOrientation(RadioGroup.VERTICAL); group.setGravity(Gravity.RIGHT);
@@ -186,7 +184,7 @@ public class MainActivity extends Activity {
         box.addView(group);
         Button confirm=button("تأیید",BLUE); box.addView(confirm,new LinearLayout.LayoutParams(-1,dp(54)));
         AlertDialog dialog=new AlertDialog.Builder(this).setView(box).create();
-        confirm.setOnClickListener(v->{ adults.setText(String.valueOf(counts[0])); children.setText(String.valueOf(counts[1])); infants.setText(String.valueOf(counts[2])); updatePassengerSummary(); dialog.dismiss(); });
+        confirm.setOnClickListener(v->{ adults.setText(String.valueOf(counts[0])); children.setText(String.valueOf(counts[1])); updatePassengerSummary(); dialog.dismiss(); });
         dialog.setOnShowListener(d->{ WindowManager.LayoutParams lp=dialog.getWindow().getAttributes(); lp.width=WindowManager.LayoutParams.MATCH_PARENT; dialog.getWindow().setAttributes(lp); });
         dialog.show();
     }
@@ -196,10 +194,10 @@ public class MainActivity extends Activity {
         Button minus=button("−",BLUE), plus=button("+",BLUE); TextView value=label(String.valueOf(counts[index])); value.setGravity(Gravity.CENTER); value.setTextSize(18); values[index]=value;
         TextView name=label(title); name.setTextSize(15); name.setGravity(Gravity.RIGHT|Gravity.CENTER_VERTICAL);
         minus.setOnClickListener(v->{ int min=index==0?1:0; if(counts[index]>min){ counts[index]--; value.setText(String.valueOf(counts[index])); } });
-        plus.setOnClickListener(v->{ int total=counts[0]+counts[1]+counts[2]; if(total>=6){ toast("حداکثر تعداد مسافران ۶ نفر است"); return; } counts[index]++; value.setText(String.valueOf(counts[index])); });
+        plus.setOnClickListener(v->{ int total=counts[0]+counts[1]; if(total>=6){ toast("حداکثر تعداد مسافران ۶ نفر است"); return; } counts[index]++; value.setText(String.valueOf(counts[index])); });
         row.addView(minus,new LinearLayout.LayoutParams(dp(52),dp(48))); gapH(row,5); row.addView(value,new LinearLayout.LayoutParams(dp(42),dp(48))); gapH(row,5); row.addView(plus,new LinearLayout.LayoutParams(dp(52),dp(48))); row.addView(name,new LinearLayout.LayoutParams(0,dp(58),1)); return row;
     }
-    private void updatePassengerSummary(){ int total=parseInt(adults.getText().toString(),1)+parseInt(children.getText().toString(),0)+parseInt(infants.getText().toString(),0); String type="normal".equals(passengerType)?"":"  •  "+("men".equals(passengerType)?"ویژه برادران":"ویژه خواهران"); passengerSummary.setText("⚙   مسافران     "+total+" مسافر"+type); passengerSummary.setTextColor(TEXT); passengerSummary.setTypeface(null,1); }
+    private void updatePassengerSummary(){ int total=parseInt(adults.getText().toString(),1)+parseInt(children.getText().toString(),0); String type="normal".equals(passengerType)?"":"  •  "+("men".equals(passengerType)?"ویژه برادران":"ویژه خواهران"); passengerSummary.setText("⚙   مسافران     "+total+" مسافر"+type); passengerSummary.setTextColor(TEXT); passengerSummary.setTypeface(null,1); }
 
     private LinearLayout makePassengerStepper(String text,boolean adult){
         LinearLayout row=new LinearLayout(this); row.setOrientation(LinearLayout.HORIZONTAL); row.setGravity(Gravity.CENTER_VERTICAL); row.setLayoutDirection(View.LAYOUT_DIRECTION_LTR); row.setBackground(bg(FIELD,14,BORDER,1)); row.setPadding(dp(10),dp(5),dp(10),dp(5));
@@ -209,13 +207,6 @@ public class MainActivity extends Activity {
         row.addView(minus,new LinearLayout.LayoutParams(dp(50),dp(44))); gapH(row,5); row.addView(val,new LinearLayout.LayoutParams(dp(56),dp(44))); gapH(row,5); row.addView(plus,new LinearLayout.LayoutParams(dp(50),dp(44))); return row;
     }
 
-    private LinearLayout makeInfantStepper(){
-        LinearLayout row=new LinearLayout(this); row.setOrientation(LinearLayout.HORIZONTAL); row.setGravity(Gravity.CENTER_VERTICAL); row.setLayoutDirection(View.LAYOUT_DIRECTION_LTR); row.setBackground(bg(FIELD,14,BORDER,1)); row.setPadding(dp(10),dp(5),dp(10),dp(5));
-        TextView l=label("نوزاد (۱۰ روز تا ۲ سال)"); l.setGravity(Gravity.LEFT|Gravity.CENTER_VERTICAL); l.setTextSize(15); l.setTypeface(null,1); row.addView(l,new LinearLayout.LayoutParams(0,dp(48),1));
-        Button minus=button("−",BLUE); minus.setTextSize(22); Button plus=button("+",BLUE); infants=field(""); infants.setGravity(Gravity.CENTER); infants.setInputType(InputType.TYPE_CLASS_NUMBER); infants.setText("0"); infants.setFocusable(false);
-        minus.setOnClickListener(v->{ int n=parseInt(infants.getText().toString(),0); infants.setText(String.valueOf(Math.max(0,n-1))); }); plus.setOnClickListener(v->{ int n=parseInt(infants.getText().toString(),0); infants.setText(String.valueOf(Math.min(9,n+1))); });
-        row.addView(minus,new LinearLayout.LayoutParams(dp(50),dp(44))); gapH(row,5); row.addView(infants,new LinearLayout.LayoutParams(dp(56),dp(44))); gapH(row,5); row.addView(plus,new LinearLayout.LayoutParams(dp(50),dp(44))); return row;
-    }
 
     private void pressAction(Button b,Runnable action){ b.setAlpha(0.55f); b.animate().scaleX(0.96f).scaleY(0.96f).setDuration(70).withEndAction(()->{ b.animate().scaleX(1f).scaleY(1f).alpha(1f).setDuration(90).withEndAction(action).start(); }).start(); }
     private void updateActionButtons(){ if(startBtn==null||stopBtn==null)return; int paleGreen=Color.rgb(157,225,195), paleRed=Color.rgb(255,170,178); startBtn.setText(running?"✓ در حال جستجو":"▶ شروع جستجو"); stopBtn.setText(actionState==2?"■ متوقف":"■ توقف"); startBtn.setBackground(bg(actionState==1?Color.rgb(0,165,95):paleGreen,14,actionState==1?Color.rgb(0,165,95):paleGreen,0)); stopBtn.setBackground(bg(actionState==2?Color.rgb(225,45,62):paleRed,14,actionState==2?Color.rgb(225,45,62):paleRed,0)); startBtn.setTextColor(actionState==1?Color.WHITE:TEXT); stopBtn.setTextColor(actionState==2?Color.WHITE:TEXT); startBtn.setEnabled(true); stopBtn.setEnabled(true); }
@@ -223,14 +214,61 @@ public class MainActivity extends Activity {
     private void showRefreshMenu(View anchor){ PopupMenu m=new PopupMenu(this,anchor); for(int i=1;i<=10;i++) m.getMenu().add(String.valueOf(i)); m.setOnMenuItemClickListener(item->{ refresh.setText(item.getTitle().toString()); return true; }); m.show(); }
     private void showPersianCalendar(){
         int[] today=getTodayJalali();
-        LinearLayout box=new LinearLayout(this); box.setOrientation(LinearLayout.VERTICAL); box.setPadding(dp(14),dp(8),dp(14),dp(8)); LinearLayout top=new LinearLayout(this); top.setOrientation(LinearLayout.HORIZONTAL); top.setGravity(Gravity.CENTER);
-        Spinner year=new Spinner(this), month=new Spinner(this); List<String> ys=new ArrayList<>(), ms=new ArrayList<>(); for(int y=today[0];y<=today[0]+8;y++)ys.add(String.valueOf(y)); String[] mn={"فروردین","اردیبهشت","خرداد","تیر","مرداد","شهریور","مهر","آبان","آذر","دی","بهمن","اسفند"}; for(String x:mn)ms.add(x); year.setAdapter(new ArrayAdapter<>(this,android.R.layout.simple_spinner_dropdown_item,ys)); month.setAdapter(new ArrayAdapter<>(this,android.R.layout.simple_spinner_dropdown_item,ms)); top.addView(year,new LinearLayout.LayoutParams(0,dp(52),1)); top.addView(month,new LinearLayout.LayoutParams(0,dp(52),1)); box.addView(top);
-        GridLayout days=new GridLayout(this); days.setColumnCount(7); days.setAlignmentMode(GridLayout.ALIGN_BOUNDS); days.setUseDefaultMargins(false); final int[] selected={today[2]};
-        for(int i=1;i<=31;i++){ Button d=button(String.valueOf(i),PANEL_2); d.setTextColor(TEXT); d.setTextSize(14); d.setMinWidth(0); d.setMinimumWidth(0); d.setMinHeight(0); d.setMinimumHeight(0); d.setPadding(0,0,0,0); final int day=i; d.setOnClickListener(v->{ selected[0]=day; for(int j=0;j<days.getChildCount();j++){ View cv=days.getChildAt(j); cv.setBackground(bg(PANEL_2,8,BORDER,1)); if(cv instanceof Button)((Button)cv).setTextColor(TEXT); } v.setBackground(bg(BLUE,8,BLUE,0)); ((Button)v).setTextColor(Color.WHITE); }); GridLayout.LayoutParams lp=new GridLayout.LayoutParams(); lp.width=0; lp.height=dp(42); lp.columnSpec=GridLayout.spec(GridLayout.UNDEFINED,1f); lp.setMargins(dp(1),dp(1),dp(1),dp(1)); days.addView(d,lp); } box.addView(days,new LinearLayout.LayoutParams(-1,dp(220)));
+        LinearLayout box=new LinearLayout(this); box.setOrientation(LinearLayout.VERTICAL); box.setPadding(dp(14),dp(8),dp(14),dp(8));
+        LinearLayout top=new LinearLayout(this); top.setOrientation(LinearLayout.HORIZONTAL); top.setGravity(Gravity.CENTER);
+        Spinner year=new Spinner(this), month=new Spinner(this); List<String> ys=new ArrayList<>(), ms=new ArrayList<>();
+        for(int y=today[0];y<=today[0]+8;y++)ys.add(String.valueOf(y));
+        String[] mn={"فروردین","اردیبهشت","خرداد","تیر","مرداد","شهریور","مهر","آبان","آذر","دی","بهمن","اسفند"}; for(String x:mn)ms.add(x);
+        year.setAdapter(new ArrayAdapter<>(this,android.R.layout.simple_spinner_dropdown_item,ys));
+        month.setAdapter(new ArrayAdapter<>(this,android.R.layout.simple_spinner_dropdown_item,ms));
+        top.addView(year,new LinearLayout.LayoutParams(0,dp(52),1)); top.addView(month,new LinearLayout.LayoutParams(0,dp(52),1)); box.addView(top);
+        GridLayout days=new GridLayout(this); days.setColumnCount(7); days.setAlignmentMode(GridLayout.ALIGN_BOUNDS); days.setUseDefaultMargins(false); days.setLayoutDirection(View.LAYOUT_DIRECTION_RTL);
+        box.addView(days,new LinearLayout.LayoutParams(-1,dp(270)));
+        final int[] selected={today[2]};
         year.setSelection(0); month.setSelection(today[1]-1);
         String old=travelDate.getText().toString(); try{ String[] p=old.split("/"); int oy=Integer.parseInt(p[0]); if(oy>=today[0]&&oy<=today[0]+8)year.setSelection(oy-today[0]); month.setSelection(Math.max(0,Integer.parseInt(p[1])-1)); selected[0]=Integer.parseInt(p[2]); }catch(Exception ignored){}
-        new AlertDialog.Builder(this).setTitle("انتخاب تاریخ شمسی — هماهنگ با گوشی").setView(box).setNegativeButton("لغو",null).setPositiveButton("تأیید",(d,w)->{ String chosen=year.getSelectedItem()+"/"+String.format(Locale.US,"%02d",month.getSelectedItemPosition()+1)+"/"+String.format(Locale.US,"%02d",selected[0]); String min=String.format(Locale.US,"%04d/%02d/%02d",today[0],today[1],today[2]); if(chosen.compareTo(min)<0){ toast("تاریخ گذشته قابل انتخاب نیست"); travelDate.setText(""); }else travelDate.setText(chosen); }).show();
+        AdapterView.OnItemSelectedListener refreshCalendar=new AdapterView.OnItemSelectedListener(){
+            @Override public void onItemSelected(AdapterView<?> parent,View view,int position,long id){ populatePersianMonth(days,Integer.parseInt(year.getSelectedItem().toString()),month.getSelectedItemPosition()+1,selected); }
+            @Override public void onNothingSelected(AdapterView<?> parent){}
+        };
+        year.setOnItemSelectedListener(refreshCalendar); month.setOnItemSelectedListener(refreshCalendar);
+        populatePersianMonth(days,Integer.parseInt(year.getSelectedItem().toString()),month.getSelectedItemPosition()+1,selected);
+        new AlertDialog.Builder(this).setTitle("انتخاب تاریخ شمسی — هماهنگ با گوشی").setView(box).setNegativeButton("لغو",null).setPositiveButton("تأیید",(d,w)->{
+            String chosen=year.getSelectedItem()+"/"+String.format(Locale.US,"%02d",month.getSelectedItemPosition()+1)+"/"+String.format(Locale.US,"%02d",selected[0]);
+            String min=String.format(Locale.US,"%04d/%02d/%02d",today[0],today[1],today[2]);
+            if(chosen.compareTo(min)<0){ toast("تاریخ گذشته قابل انتخاب نیست"); travelDate.setText(""); }else travelDate.setText(chosen);
+        }).show();
     }
+
+    private void populatePersianMonth(GridLayout days,int jy,int jm,int[] selected){
+        days.removeAllViews();
+        String[] week={"شنبه","یکشنبه","دوشنبه","سه‌شنبه","چهارشنبه","پنجشنبه","جمعه"};
+        for(String name:week){ TextView h=label(name); h.setGravity(Gravity.CENTER); h.setTextSize(10); h.setTypeface(null,1); GridLayout.LayoutParams hp=new GridLayout.LayoutParams(); hp.width=0; hp.height=dp(32); hp.columnSpec=GridLayout.spec(GridLayout.UNDEFINED,1f); days.addView(h,hp); }
+        int[] g=jalaliToGregorian(jy,jm,1); java.util.Calendar first=java.util.Calendar.getInstance(); first.clear(); first.set(g[0],g[1]-1,g[2],12,0,0);
+        int offset=(first.get(java.util.Calendar.DAY_OF_WEEK)+6)%7;
+        for(int i=0;i<offset;i++){ Space empty=new Space(this); GridLayout.LayoutParams ep=new GridLayout.LayoutParams(); ep.width=0; ep.height=dp(42); ep.columnSpec=GridLayout.spec(GridLayout.UNDEFINED,1f); days.addView(empty,ep); }
+        int count=jalaliMonthLength(jy,jm); if(selected[0]>count)selected[0]=count;
+        for(int i=1;i<=count;i++){
+            Button d=button(String.valueOf(i),PANEL_2); d.setTextColor(TEXT); d.setTextSize(14); d.setMinWidth(0); d.setMinimumWidth(0); d.setMinHeight(0); d.setMinimumHeight(0); d.setPadding(0,0,0,0);
+            final int day=i; if(day==selected[0]){ d.setBackground(bg(BLUE,8,BLUE,0)); d.setTextColor(Color.WHITE); }
+            d.setOnClickListener(v->{ selected[0]=day; populatePersianMonth(days,jy,jm,selected); });
+            GridLayout.LayoutParams lp=new GridLayout.LayoutParams(); lp.width=0; lp.height=dp(42); lp.columnSpec=GridLayout.spec(GridLayout.UNDEFINED,1f); lp.setMargins(dp(1),dp(1),dp(1),dp(1)); days.addView(d,lp);
+        }
+    }
+
+    private int jalaliMonthLength(int jy,int jm){ if(jm<=6)return 31; if(jm<=11)return 30; int r=jy%33; return (r==1||r==5||r==9||r==13||r==17||r==22||r==26||r==30)?30:29; }
+
+    private int[] jalaliToGregorian(int jy,int jm,int jd){
+        jy+=1595; int days=-355668+(365*jy)+(jy/33)*8+((jy%33)+3)/4+jd+(jm<7?(jm-1)*31:((jm-7)*30)+186);
+        int gy=400*(days/146097); days%=146097;
+        if(days>36524){ gy+=100*(--days/36524); days%=36524; if(days>=365)days++; }
+        gy+=4*(days/1461); days%=1461;
+        if(days>365){ gy+=(days-1)/365; days=(days-1)%365; }
+        int gd=days+1; int leap=(gy%4==0&&gy%100!=0)||gy%400==0?1:0; int[] md={0,31,28+leap,31,30,31,30,31,31,30,31,30,31}; int gm=1;
+        while(gm<=12&&gd>md[gm]){ gd-=md[gm]; gm++; }
+        return new int[]{gy,gm,gd};
+    }
+
     private int[] getTodayJalali(){
         java.util.Calendar c=java.util.Calendar.getInstance(); int gy=c.get(java.util.Calendar.YEAR), gm=c.get(java.util.Calendar.MONTH)+1, gd=c.get(java.util.Calendar.DAY_OF_MONTH);
         int[] gdm={0,31,59,90,120,151,181,212,243,273,304,334}; int gy2=gm>2?gy+1:gy; int days=355666+365*gy+(gy2+3)/4-(gy2+99)/100+(gy2+399)/400+gd+gdm[gm-1]; int jy=-1595+33*(days/12053); days%=12053; jy+=4*(days/1461); days%=1461; if(days>365){jy+=(days-1)/365;days=(days-1)%365;} int jm=days<186?1+days/31:7+(days-186)/30; int jd=1+(days<186?days%31:(days-186)%30); return new int[]{jy,jm,jd};
@@ -278,7 +316,7 @@ public class MainActivity extends Activity {
     }
 
     private void injectSearchForm(){
-        int total=parseInt(adults.getText().toString(),1)+parseInt(children.getText().toString(),0)+parseInt(infants.getText().toString(),0);
+        int total=parseInt(adults.getText().toString(),1)+parseInt(children.getText().toString(),0);
         String js="(async function(){const sleep=ms=>new Promise(r=>setTimeout(r,ms));const fire=(el)=>{el.dispatchEvent(new Event('input',{bubbles:true}));el.dispatchEvent(new Event('change',{bubbles:true}));};try{let change=[...document.querySelectorAll('button,div,a')].find(x=>(x.innerText||'').trim()==='تغییر جستجو');if(change){change.click();await sleep(500);}async function station(kind,city){let comps=[...document.querySelectorAll('app-stations')];let c=comps.find(x=>((x.getAttribute('name')||'').toLowerCase()).includes(kind==='from'?'from':'to'));if(!c)return false;let clear=c.querySelector('.ng-clear-wrapper');if(clear)clear.click();let inp=c.querySelector('input[role=combobox]');if(!inp)return false;inp.focus();inp.value=city;fire(inp);await sleep(650);let opts=[...document.querySelectorAll('ng-dropdown-panel .ng-option')];let o=opts.find(x=>(x.innerText||'').trim()===city)||opts.find(x=>(x.innerText||'').includes(city));if(o){o.click();await sleep(250);return true;}return false;}let a=await station('from',"+q(origin.getText().toString().trim())+");let b=await station('to',"+q(destination.getText().toString().trim())+");if(!a||!b){MasoudBridge.log('مبدا یا مقصد تنظیم نشد');return;}let dateText="+q(travelDate.getText().toString().trim())+";let parts=dateText.replace(/-/g,'/').split('/').map(Number);let picker=document.querySelector('app-datepicker-single[name=oneWayDatePicker]');if(!picker||parts.length!==3){MasoudBridge.log('تقویم رجا پیدا نشد');return;}let cal=picker.querySelector('button.icon-calendar')||picker.querySelector('input[name=dp]');if(cal)cal.click();await sleep(650);let jy=parts[0],jm=parts[1],jd=parts[2];let monthNames=['','فروردین','اردیبهشت','خرداد','تیر','مرداد','شهریور','مهر','آبان','آذر','دی','بهمن','اسفند'];for(let sel of [...document.querySelectorAll('select')].filter(x=>x.offsetParent!==null)){let opts=[...sel.options];let yo=opts.find(o=>(o.textContent||'').includes(String(jy)));if(yo){sel.value=yo.value;fire(sel);await sleep(220);continue;}let mo=opts.find(o=>(o.textContent||'').includes(monthNames[jm])||(o.textContent||'').trim()===String(jm));if(mo){sel.value=mo.value;fire(sel);await sleep(220);}}let dayFa=String(jd).replace(/[0-9]/g,d=>'۰۱۲۳۴۵۶۷۸۹'[Number(d)]);let nodes=[...document.querySelectorAll('button,td,span,div')].filter(x=>x.offsetParent!==null);let day=nodes.find(x=>{let t=(x.innerText||'').trim();let c=(x.className||'').toString().toLowerCase();return (t===String(jd)||t===dayFa)&&!c.includes('disabled')&&!c.includes('muted')&&!c.includes('outside');});if(!day){MasoudBridge.log('روز تاریخ در تقویم پیدا نشد');return;}day.click();await sleep(650);let dateInp=picker.querySelector('input[name=dp]');if(!dateInp||!(dateInp.value||'').trim()){MasoudBridge.log('تاریخ در رجا ثبت نشد');return;}let pb=document.querySelector('#dropdownPassenger');if(pb){pb.click();await sleep(350);let target="+total+";let options=[...document.querySelectorAll('.dropdown-menu *,[role=option]')].filter(x=>x.offsetParent!==null);let exact=options.find(x=>{let t=(x.innerText||'').trim();let n=(t.match(/[0-9۰-۹]+/)||[])[0]||'';n=n.replace(/[۰-۹]/g,d=>'۰۱۲۳۴۵۶۷۸۹'.indexOf(d));return n===String(target);});if(exact){exact.click();MasoudBridge.log('تعداد مسافر در رجا انتخاب شد: '+target);}else MasoudBridge.log('گزینه تعداد مسافر در رجا پیدا نشد');}await sleep(350);let pt="+q(passengerType)+";let typeLabel=pt==='men'?'ویژه برادران':pt==='women'?'ویژه خواهران':'مسافران عادی';let visible=[...document.querySelectorAll('button,div,span,input')].filter(x=>x.offsetParent!==null);let typeControl=visible.find(x=>{let t=(x.innerText||x.value||'').trim();return t==='مسافران عادی'||t==='ویژه برادران'||t==='ویژه خواهران';});if(typeControl){typeControl.click();await sleep(300);let choices=[...document.querySelectorAll('button,li,div,span,[role=option]')].filter(x=>x.offsetParent!==null);let choice=choices.find(x=>(x.innerText||'').trim()===typeLabel);if(choice){choice.click();MasoudBridge.log('نوع مسافر در رجا انتخاب شد: '+typeLabel);}else MasoudBridge.log('نوع مسافر در رجا پیدا نشد');}else MasoudBridge.log('کادر نوع مسافر در رجا پیدا نشد');await sleep(300);"+(coupe.isChecked()?"let cc=[...document.querySelectorAll('input[type=checkbox]')].find(x=>((x.parentElement?.innerText)||'').includes('کوپه دربست'));if(cc&&!cc.checked)cc.click();":"")+"let bs=[...document.querySelectorAll('button')].filter(x=>x.offsetParent!==null);let s=bs.find(x=>(x.innerText||'').trim().includes('جستجو'));if(s){s.click();MasoudBridge.searchClicked();}else MasoudBridge.log('دکمه جستجو پیدا نشد');}catch(e){MasoudBridge.log('خطای تنظیم جستجو: '+e);}})();";
         webView.evaluateJavascript(js,null);
     }
