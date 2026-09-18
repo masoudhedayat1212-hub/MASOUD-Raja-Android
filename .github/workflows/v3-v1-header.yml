@@ -39,6 +39,8 @@ jobs:
               v3_from_v1/header_parts/part60000.b64 \
               | base64 -d > "$APP/app/src/main/res/drawable-nodpi/v3_header.jpg"
 
+          sha256sum v3_from_v1/header_parts/*.b64
+          sha256sum "$APP/app/src/main/res/drawable-nodpi/v3_header.jpg"
           echo "409279e77c0a0788a331b97ce06891eea75dbaa8d069aa04864142d56cca86ef  $APP/app/src/main/res/drawable-nodpi/v3_header.jpg" | sha256sum -c -
 
           python3 - <<'PY'
