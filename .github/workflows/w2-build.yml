@@ -56,7 +56,7 @@ jobs:
           if 'android:roundIcon=' in t:
               t=re.sub(r'android:roundIcon="[^"]+"','android:roundIcon="@drawable/w6_train_icon"',t)
           else:
-              t=re.sub(r'<application\\b','<application android:roundIcon="@drawable/w6_train_icon"',t,count=1)
+              t=re.sub(r'<application\b','<application android:roundIcon="@drawable/w6_train_icon"',t,count=1)
           p.write_text(t,encoding='utf-8')
           PY
           grep -q 'android:icon="@drawable/w6_train_icon"' "$APP/app/src/main/AndroidManifest.xml"
