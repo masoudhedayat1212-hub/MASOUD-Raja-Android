@@ -8,12 +8,6 @@ import android.content.ClipData;
 import android.content.ClipboardManager;
 import android.content.Context;
 import android.graphics.Color;
-import android.graphics.Canvas;
-import android.graphics.Paint;
-import android.graphics.Path;
-import android.graphics.RectF;
-import android.graphics.LinearGradient;
-import android.graphics.Shader;
 import android.graphics.drawable.GradientDrawable;
 import android.net.Uri;
 import android.os.Bundle;
@@ -100,9 +94,11 @@ public class MainActivity extends Activity {
 
     private void buildUi() {
         LinearLayout root = new LinearLayout(this); root.setOrientation(LinearLayout.VERTICAL); root.setBackgroundColor(BG); root.setPadding(0,dp(4),0,0);
-        HeroView hero=new HeroView(this); root.addView(hero,new LinearLayout.LayoutParams(-1,dp(118)));
-        LinearLayout header=new LinearLayout(this); header.setOrientation(LinearLayout.HORIZONTAL); header.setGravity(Gravity.CENTER); header.setPadding(dp(12),dp(8),dp(12),dp(8));
-        TextView title = new TextView(this); title.setText("🚆  MASOUD Raja Bot  •  W2"); title.setTextColor(TEXT); title.setTextSize(20); title.setTypeface(null,1); title.setGravity(Gravity.CENTER); header.addView(title,new LinearLayout.LayoutParams(-1,dp(48))); root.addView(header);
+        ImageView referenceHeader = new ImageView(this);
+        referenceHeader.setImageResource(R.drawable.w2_header_reference);
+        referenceHeader.setScaleType(ImageView.ScaleType.CENTER_CROP);
+        referenceHeader.setAdjustViewBounds(false);
+        root.addView(referenceHeader,new LinearLayout.LayoutParams(-1,dp(171)));
         LinearLayout tabs = new LinearLayout(this); tabs.setOrientation(LinearLayout.HORIZONTAL); tabs.setPadding(dp(10),0,dp(10),dp(10)); tabs.setGravity(Gravity.CENTER);
         tabRun=button("⌂  خانه",BLUE); tabBrowser=button("▣  رجا",PANEL_2);
         tabs.addView(tabRun,new LinearLayout.LayoutParams(0,dp(48),1)); gapH(tabs,6); tabs.addView(tabBrowser,new LinearLayout.LayoutParams(0,dp(48),1)); root.addView(tabs);
@@ -145,58 +141,11 @@ public class MainActivity extends Activity {
 
     private void showRefreshMenu(View anchor){ PopupMenu m=new PopupMenu(this,anchor); for(int i=1;i<=10;i++) m.getMenu().add(String.valueOf(i)); m.setOnMenuItemClickListener(item->{ refresh.setText(item.getTitle().toString()); return true; }); m.show(); }
     private void showPersianCalendar(){
-        LinearLayout box=new LinearLayout(this); box.setOrientation(LinearLayout.VERTICAL); box.setPadding(dp(14),dp(10),dp(14),dp(10)); box.setBackgroundColor(Color.WHITE);
-        LinearLayout top=new LinearLayout(this); top.setOrientation(LinearLayout.HORIZONTAL); top.setGravity(Gravity.CENTER);
-        Spinner year=new Spinner(this), month=new Spinner(this); List<String> ys=new ArrayList<>(), ms=new ArrayList<>();
-        for(int y=1404;y<=1412;y++)ys.add(String.valueOf(y));
-        String[] mn={"فروردین","اردیبهشت","خرداد","تیر","مرداد","شهریور","مهر","آبان","آذر","دی","بهمن","اسفند"};
-        for(String x:mn)ms.add(x);
-        ArrayAdapter<String> ya=new ArrayAdapter<>(this,android.R.layout.simple_spinner_dropdown_item,ys);
-        ArrayAdapter<String> ma=new ArrayAdapter<>(this,android.R.layout.simple_spinner_dropdown_item,ms);
-        year.setAdapter(ya); month.setAdapter(ma);
-        top.addView(year,new LinearLayout.LayoutParams(0,dp(52),1)); gapH(top,8); top.addView(month,new LinearLayout.LayoutParams(0,dp(52),1)); box.addView(top); gap(box,8);
-
-        GridLayout days=new GridLayout(this); days.setColumnCount(7); days.setUseDefaultMargins(false);
-        final int[] selected={1};
-        for(int i=1;i<=31;i++){
-            Button d=button(String.valueOf(i),PANEL_2);
-            d.setTextColor(TEXT); d.setTextSize(14); d.setMinWidth(0); d.setMinimumWidth(0); d.setMinHeight(0); d.setMinimumHeight(0);
-            final int day=i;
-            d.setOnClickListener(v->{
-                selected[0]=day;
-                for(int j=0;j<days.getChildCount();j++){
-                    View cv=days.getChildAt(j);
-                    cv.setBackground(bg(PANEL_2,10,BORDER,1));
-                    if(cv instanceof Button)((Button)cv).setTextColor(TEXT);
-                }
-                v.setBackground(bg(BLUE,10,BLUE,0)); ((Button)v).setTextColor(Color.WHITE);
-            });
-            GridLayout.LayoutParams lp=new GridLayout.LayoutParams();
-            lp.width=0; lp.height=dp(44); lp.columnSpec=GridLayout.spec(GridLayout.UNDEFINED,1f);
-            lp.setMargins(dp(2),dp(2),dp(2),dp(2));
-            days.addView(d,lp);
-        }
-        box.addView(days);
-
-        String old=travelDate.getText().toString();
-        try{
-            String[] p=old.split("/");
-            year.setSelection(Math.max(0,Math.min(ys.size()-1,Integer.parseInt(p[0])-1404)));
-            month.setSelection(Math.max(0,Math.min(11,Integer.parseInt(p[1])-1)));
-            selected[0]=Math.max(1,Math.min(31,Integer.parseInt(p[2])));
-        }catch(Exception ignored){}
-
-        AlertDialog dlg=new AlertDialog.Builder(this)
-            .setTitle("انتخاب تاریخ شمسی")
-            .setView(box)
-            .setNegativeButton("لغو",null)
-            .setPositiveButton("تأیید",(d,w)-> travelDate.setText(year.getSelectedItem()+"/"+String.format(Locale.US,"%02d",month.getSelectedItemPosition()+1)+"/"+String.format(Locale.US,"%02d",selected[0])))
-            .create();
-        dlg.setOnShowListener(x->{
-            dlg.getButton(AlertDialog.BUTTON_POSITIVE).setTextColor(BLUE);
-            dlg.getButton(AlertDialog.BUTTON_NEGATIVE).setTextColor(BLUE);
-        });
-        dlg.show();
+        LinearLayout box=new LinearLayout(this); box.setOrientation(LinearLayout.VERTICAL); box.setPadding(dp(14),dp(8),dp(14),dp(8)); LinearLayout top=new LinearLayout(this); top.setOrientation(LinearLayout.HORIZONTAL); top.setGravity(Gravity.CENTER);
+        Spinner year=new Spinner(this), month=new Spinner(this); List<String> ys=new ArrayList<>(), ms=new ArrayList<>(); for(int y=1404;y<=1412;y++)ys.add(String.valueOf(y)); String[] mn={"فروردین","اردیبهشت","خرداد","تیر","مرداد","شهریور","مهر","آبان","آذر","دی","بهمن","اسفند"}; for(String x:mn)ms.add(x); year.setAdapter(new ArrayAdapter<>(this,android.R.layout.simple_spinner_dropdown_item,ys)); month.setAdapter(new ArrayAdapter<>(this,android.R.layout.simple_spinner_dropdown_item,ms)); top.addView(year,new LinearLayout.LayoutParams(0,dp(52),1)); top.addView(month,new LinearLayout.LayoutParams(0,dp(52),1)); box.addView(top);
+        GridLayout days=new GridLayout(this); days.setColumnCount(7); final int[] selected={1}; for(int i=1;i<=31;i++){ Button d=button(String.valueOf(i),PANEL_2); final int day=i; d.setOnClickListener(v->{ selected[0]=day; for(int j=0;j<days.getChildCount();j++) days.getChildAt(j).setBackground(bg(PANEL_2,10,BORDER,1)); v.setBackground(bg(BLUE,10,CYAN,1)); }); days.addView(d,new GridLayout.LayoutParams()); } box.addView(days);
+        String old=travelDate.getText().toString(); try{ String[] p=old.split("/"); year.setSelection(Math.max(0,Integer.parseInt(p[0])-1404)); month.setSelection(Math.max(0,Integer.parseInt(p[1])-1)); selected[0]=Integer.parseInt(p[2]); }catch(Exception ignored){}
+        new AlertDialog.Builder(this).setTitle("انتخاب تاریخ شمسی").setView(box).setNegativeButton("لغو",null).setPositiveButton("تأیید",(d,w)-> travelDate.setText(year.getSelectedItem()+"/"+String.format(Locale.US,"%02d",month.getSelectedItemPosition()+1)+"/"+String.format(Locale.US,"%02d",selected[0]))).show();
     }
 
     private LinearLayout makeBrowserPanel(){ LinearLayout p=new LinearLayout(this); p.setOrientation(LinearLayout.VERTICAL); p.setPadding(dp(8),0,dp(8),dp(8)); TextView h=label("صفحه رجا — هنگام پیدا شدن بلیت خودکار باز می‌شود"); h.setGravity(Gravity.CENTER); h.setTextColor(CYAN); p.addView(h,new LinearLayout.LayoutParams(-1,dp(38))); webView=new WebView(this); webView.setBackgroundColor(Color.WHITE); p.addView(webView,new LinearLayout.LayoutParams(-1,0,1)); return p; }
@@ -263,47 +212,4 @@ public class MainActivity extends Activity {
         @JavascriptInterface public void notFound(){ runOnUiThread(()->{ reserved=false; status.setText("● یافت نشد؛ جستجوی مجدد..."); log("بلیط مطابق معیار فعلاً یافت نشد."); }); }
     }
 
-    private class HeroView extends View {
-        private final Paint p=new Paint(Paint.ANTI_ALIAS_FLAG);
-        HeroView(Context c){ super(c); }
-        @Override protected void onDraw(Canvas canvas){
-            super.onDraw(canvas);
-            float w=getWidth(), h=getHeight();
-            p.setShader(new LinearGradient(0,0,w,h,Color.rgb(211,241,255),Color.WHITE,Shader.TileMode.CLAMP));
-            canvas.drawRect(0,0,w,h,p); p.setShader(null);
-
-            // mountains
-            p.setColor(Color.rgb(150,205,240));
-            Path m=new Path(); m.moveTo(0,h*.58f); m.lineTo(w*.12f,h*.18f); m.lineTo(w*.23f,h*.55f); m.lineTo(w*.33f,h*.25f); m.lineTo(w*.46f,h*.60f); m.close(); canvas.drawPath(m,p);
-            p.setColor(Color.rgb(197,228,248));
-            Path m2=new Path(); m2.moveTo(w*.18f,h*.62f); m2.lineTo(w*.30f,h*.30f); m2.lineTo(w*.43f,h*.62f); m2.lineTo(w*.55f,h*.34f); m2.lineTo(w*.70f,h*.66f); m2.close(); canvas.drawPath(m2,p);
-
-            // mosque/minarets
-            p.setColor(Color.rgb(72,165,230));
-            canvas.drawRect(w*.49f,h*.42f,w*.65f,h*.74f,p);
-            canvas.drawCircle(w*.57f,h*.39f,w*.075f,p);
-            canvas.drawRect(w*.46f,h*.20f,w*.485f,h*.70f,p);
-            canvas.drawRect(w*.66f,h*.18f,w*.685f,h*.70f,p);
-            p.setColor(Color.rgb(18,111,194));
-            canvas.drawCircle(w*.472f,h*.18f,w*.022f,p); canvas.drawCircle(w*.672f,h*.16f,w*.022f,p);
-
-            // train body
-            p.setColor(Color.WHITE);
-            RectF body=new RectF(w*.02f,h*.43f,w*.43f,h*.79f); canvas.drawRoundRect(body,dp(16),dp(16),p);
-            p.setColor(Color.rgb(32,134,232));
-            RectF stripe=new RectF(w*.02f,h*.68f,w*.43f,h*.77f); canvas.drawRoundRect(stripe,dp(8),dp(8),p);
-            p.setColor(Color.rgb(15,53,82));
-            canvas.drawRoundRect(new RectF(w*.30f,h*.48f,w*.40f,h*.61f),dp(5),dp(5),p);
-            p.setColor(Color.rgb(80,160,225));
-            for(int i=0;i<6;i++) canvas.drawRect(w*(.06f+i*.04f),h*.50f,w*(.085f+i*.04f),h*.60f,p);
-
-            // title area
-            p.setColor(Color.rgb(17,111,225)); p.setTextSize(dp(31)); p.setFakeBoldText(true); p.setTextAlign(Paint.Align.RIGHT);
-            canvas.drawText("قطار",w*.91f,h*.35f,p);
-            p.setColor(Color.rgb(8,20,45)); p.setTextSize(dp(20)); canvas.drawText("MASOUD Raja",w*.91f,h*.59f,p);
-            p.setColor(Color.rgb(88,108,135)); p.setTextSize(dp(12)); p.setFakeBoldText(false); canvas.drawText("سفر بهتر، همیشه نزدیک‌تر",w*.91f,h*.77f,p);
-            p.setColor(Color.rgb(232,244,255)); canvas.drawRoundRect(new RectF(w*.83f,h*.08f,w*.96f,h*.28f),dp(18),dp(18),p);
-            p.setColor(Color.rgb(17,111,225)); p.setTextSize(dp(15)); p.setFakeBoldText(true); p.setTextAlign(Paint.Align.CENTER); canvas.drawText("W2",w*.895f,h*.22f,p);
-        }
-    }
 }
