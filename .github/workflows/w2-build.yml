@@ -6,17 +6,20 @@ on:
     paths:
       - '.github/workflows/w2-build.yml'
       - 'w2/MainActivity.java'
+      - 'w2/header_reference.b64'
 
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
       - uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: '17'
-      - name: Prepare W2
+
+      - name: Prepare W2 from W1
         shell: bash
         run: |
           set -euo pipefail
@@ -25,40 +28,57 @@ jobs:
           APP=buildsrc/MASOUD_Android
           MAIN="$APP/app/src/main/java/com/masoud/raja/MainActivity.java"
           cp w2/MainActivity.java "$MAIN"
+
           sed -i 's/import android.app.Ringtone;/import android.media.Ringtone;/' "$MAIN"
           sed -i 's/import android.app.RingtoneManager;/import android.media.RingtoneManager;/' "$MAIN"
+
+          mkdir -p "$APP/app/src/main/res/drawable-nodpi"
+          base64 -d w2/header_reference.b64 > "$APP/app/src/main/res/drawable-nodpi/w2_header_reference.jpg"
+          test -s "$APP/app/src/main/res/drawable-nodpi/w2_header_reference.jpg"
+          file "$APP/app/src/main/res/drawable-nodpi/w2_header_reference.jpg"
+
           python3 - <<'PY'
           from pathlib import Path
           p=Path('buildsrc/MASOUD_Android/app/build.gradle')
           t=p.read_text(encoding='utf-8')
-          t=t.replace("applicationId 'com.masoud.raja'","applicationId 'com.masoud.raja.w2'")
-          t=t.replace('applicationId "com.masoud.raja"','applicationId "com.masoud.raja.w2"')
-          t=t.replace('versionCode 1','versionCode 31')
+          t=t.replace("applicationId 'com.masoud.raja'","applicationId 'com.masoud.raja.w2real'")
+          t=t.replace('applicationId "com.masoud.raja"','applicationId "com.masoud.raja.w2real"')
+          t=t.replace('versionCode 1','versionCode 32')
           t=t.replace("versionName '1.0.0'","versionName 'W2'")
           t=t.replace('versionName "1.0.0"','versionName "W2"')
           p.write_text(t,encoding='utf-8')
           PY
+
+      - name: Verify approved changes only
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -q 'R.drawable.w2_header_reference' w2/MainActivity.java
+          ! grep -q 'MASOUD Raja Bot' w2/MainActivity.java
+          ! grep -q 'tabPassengers' w2/MainActivity.java
+          grep -q 'section("تعداد مسافر")' w2/MainActivity.java
+          grep -q 'new WebView(this)' w2/MainActivity.java
+          grep -q 'injectLogin()' w2/MainActivity.java
+          grep -q 'injectSearchForm()' w2/MainActivity.java
+          grep -q 'inspectResultsAndReserve()' w2/MainActivity.java
+
       - name: Build APK
         shell: bash
         run: |
           set -euo pipefail
           cd buildsrc/MASOUD_Android
           gradle assembleDebug --stacktrace
-      - name: Verify W2
+
+      - name: Verify APK
         shell: bash
         run: |
           set -euo pipefail
           APK=$(find buildsrc/MASOUD_Android/app/build/outputs/apk -type f -name '*.apk' | head -1)
           test -s "$APK"
           unzip -t "$APK" >/dev/null
-          grep -q 'W2' w2/MainActivity.java
-          grep -q 'section("تعداد مسافر")' w2/MainActivity.java
-          ! grep -q 'tabPassengers' w2/MainActivity.java
-          ! grep -q 'addPassenger()' w2/MainActivity.java
-          grep -q 'new WebView(this)' w2/MainActivity.java
-          grep -q 'inspectResultsAndReserve()' w2/MainActivity.java
           mkdir -p "$GITHUB_WORKSPACE/output"
           cp "$APK" "$GITHUB_WORKSPACE/output/w2.apk"
+
       - uses: actions/upload-artifact@v4
         with:
           name: w2
