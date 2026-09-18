@@ -1,5 +1,8 @@
 name: W8 Build
 
+permissions:
+  contents: write
+
 on:
   workflow_dispatch:
   push:
@@ -131,6 +134,21 @@ jobs:
           unzip -t "$APK" >/dev/null
           mkdir -p "$GITHUB_WORKSPACE/output"
           cp "$APK" "$GITHUB_WORKSPACE/output/w8.apk"
+
+      - name: Save W8 APK in repository
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p releases
+          cp output/w8.apk releases/MASOUD_Raja_W8.apk
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -f releases/MASOUD_Raja_W8.apk
+          if git diff --cached --quiet; then
+            exit 0
+          fi
+          git commit -m "Save installable W8 APK"
+          git push
 
       - uses: actions/upload-artifact@v4
         with:
