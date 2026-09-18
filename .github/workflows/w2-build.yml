@@ -40,7 +40,7 @@ jobs:
           clean = ''.join(ch for ch in source if ch.isalnum() or ch in '+/=')
           clean += '=' * (-len(clean) % 4)
           image = base64.b64decode(clean, validate=False)
-          if not image.startswith(b'\\xff\\xd8\\xff'):
+          if image[:3] != bytes((255, 216, 255)):
               raise SystemExit('Invalid JPEG header')
           Path('buildsrc/MASOUD_Android/app/src/main/res/drawable-nodpi/w2_header_reference.jpg').write_bytes(image)
           PY
