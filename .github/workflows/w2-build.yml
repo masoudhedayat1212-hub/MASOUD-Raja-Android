@@ -52,11 +52,9 @@ jobs:
           from pathlib import Path
           p=Path('buildsrc/MASOUD_Android/app/src/main/AndroidManifest.xml')
           t=p.read_text(encoding='utf-8')
-          t=re.sub(r'android:icon="[^"]+"','android:icon="@drawable/w6_train_icon"',t)
-          if 'android:roundIcon=' in t:
-              t=re.sub(r'android:roundIcon="[^"]+"','android:roundIcon="@drawable/w6_train_icon"',t)
-          else:
-              t=re.sub(r'<application\b','<application android:roundIcon="@drawable/w6_train_icon"',t,count=1)
+          t=re.sub(r'\s+android:icon="[^"]*"','',t)
+          t=re.sub(r'\s+android:roundIcon="[^"]*"','',t)
+          t=t.replace('<application','<application android:icon="@drawable/w6_train_icon" android:roundIcon="@drawable/w6_train_icon"',1)
           p.write_text(t,encoding='utf-8')
           PY
           grep -q 'android:icon="@drawable/w6_train_icon"' "$APP/app/src/main/AndroidManifest.xml"
