@@ -94,11 +94,22 @@ public class MainActivity extends Activity {
 
     private void buildUi() {
         LinearLayout root = new LinearLayout(this); root.setOrientation(LinearLayout.VERTICAL); root.setBackgroundColor(BG); root.setPadding(0,dp(4),0,0);
+        FrameLayout headerFrame = new FrameLayout(this);
         ImageView referenceHeader = new ImageView(this);
         referenceHeader.setImageResource(R.drawable.w2_header_reference);
         referenceHeader.setScaleType(ImageView.ScaleType.CENTER_CROP);
         referenceHeader.setAdjustViewBounds(false);
-        root.addView(referenceHeader,new LinearLayout.LayoutParams(-1,dp(171)));
+        headerFrame.addView(referenceHeader,new FrameLayout.LayoutParams(-1,-1));
+        TextView version = new TextView(this);
+        version.setText("W2");
+        version.setTextColor(Color.BLACK);
+        version.setTextSize(18);
+        version.setTypeface(null,1);
+        version.setGravity(Gravity.CENTER);
+        FrameLayout.LayoutParams versionLp = new FrameLayout.LayoutParams(dp(58),dp(40),Gravity.TOP|Gravity.RIGHT);
+        versionLp.setMargins(0,dp(8),dp(10),0);
+        headerFrame.addView(version,versionLp);
+        root.addView(headerFrame,new LinearLayout.LayoutParams(-1,dp(171)));
         LinearLayout tabs = new LinearLayout(this); tabs.setOrientation(LinearLayout.HORIZONTAL); tabs.setPadding(dp(10),0,dp(10),dp(10)); tabs.setGravity(Gravity.CENTER);
         tabRun=button("⌂  خانه",BLUE); tabBrowser=button("▣  رجا",PANEL_2);
         tabs.addView(tabRun,new LinearLayout.LayoutParams(0,dp(48),1)); gapH(tabs,6); tabs.addView(tabBrowser,new LinearLayout.LayoutParams(0,dp(48),1)); root.addView(tabs);
