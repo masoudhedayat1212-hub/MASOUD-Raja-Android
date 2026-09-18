@@ -22,3 +22,4 @@ jobs:
           find /tmp/v1 -type f -name '*.xml' -print -exec sh -c 'echo --- $1; sed -n "1,220p" "$1"' _ {} \;
           echo '=== GRADLE ==='
           find /tmp/v1 -type f \( -name 'build.gradle' -o -name 'settings.gradle' \) -print -exec sed -n '1,220p' {} \;
+# inspect trigger
