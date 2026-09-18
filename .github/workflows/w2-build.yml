@@ -1,4 +1,4 @@
-name: W4 Build
+name: W5 Build
 
 on:
   workflow_dispatch:
@@ -19,7 +19,7 @@ jobs:
           distribution: temurin
           java-version: '17'
 
-      - name: Prepare W4 from W3 verified reference
+      - name: Prepare W5 from W4 verified reference
         shell: bash
         run: |
           set -euo pipefail
@@ -46,6 +46,9 @@ jobs:
           PY
           test -s "$APP/app/src/main/res/drawable-nodpi/w2_header_reference.jpg"
           file "$APP/app/src/main/res/drawable-nodpi/w2_header_reference.jpg"
+          cp "$APP/app/src/main/res/drawable-nodpi/w2_header_reference.jpg" "$APP/app/src/main/res/drawable-nodpi/app_icon.jpg"
+          sed -i 's#android:icon="@mipmap/ic_launcher"#android:icon="@drawable/app_icon"#' "$APP/app/src/main/AndroidManifest.xml"
+          sed -i 's#android:roundIcon="@mipmap/ic_launcher_round"#android:roundIcon="@drawable/app_icon"#' "$APP/app/src/main/AndroidManifest.xml"
 
           python3 - <<'PY'
           from pathlib import Path
@@ -53,9 +56,9 @@ jobs:
           t=p.read_text(encoding='utf-8')
           t=t.replace("applicationId 'com.masoud.raja'","applicationId 'com.masoud.raja.w2real'")
           t=t.replace('applicationId "com.masoud.raja"','applicationId "com.masoud.raja.w2real"')
-          t=t.replace('versionCode 1','versionCode 34')
-          t=t.replace("versionName '1.0.0'","versionName 'W4'")
-          t=t.replace('versionName "1.0.0"','versionName "W4"')
+          t=t.replace('versionCode 1','versionCode 35')
+          t=t.replace("versionName '1.0.0'","versionName 'W5'")
+          t=t.replace('versionName "1.0.0"','versionName "W5"')
           p.write_text(t,encoding='utf-8')
           PY
 
@@ -87,10 +90,10 @@ jobs:
           test -s "$APK"
           unzip -t "$APK" >/dev/null
           mkdir -p "$GITHUB_WORKSPACE/output"
-          cp "$APK" "$GITHUB_WORKSPACE/output/w4.apk"
+          cp "$APK" "$GITHUB_WORKSPACE/output/w5.apk"
 
       - uses: actions/upload-artifact@v4
         with:
-          name: w4
-          path: output/w4.apk
+          name: w5
+          path: output/w5.apk
           if-no-files-found: error
