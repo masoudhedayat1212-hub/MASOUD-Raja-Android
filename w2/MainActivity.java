@@ -47,7 +47,7 @@ public class MainActivity extends Activity {
     private EditText phone, password, origin, destination, travelDate, trainNumber, minPrice, maxPrice, adults, children, infants, refresh;
     private String passengerType = "normal";
     private CheckBox priceMode, coupe, alarm;
-    private TextView status, logView;
+    private TextView status, logView, passengerSummary;
     private LinearLayout runPanel, browserPanel;
     private Button startBtn, stopBtn, tabRun, tabBrowser;
     private boolean running = false;
@@ -103,7 +103,7 @@ public class MainActivity extends Activity {
         referenceHeader.setAdjustViewBounds(false);
         headerFrame.addView(referenceHeader,new FrameLayout.LayoutParams(-1,-1));
         TextView version = new TextView(this);
-        version.setText("W3");
+        version.setText("W4");
         version.setTextColor(Color.BLACK);
         version.setTextSize(18);
         version.setTypeface(null,1);
@@ -140,17 +140,15 @@ public class MainActivity extends Activity {
         swap.setOnClickListener(v->{ String a=origin.getText().toString(); origin.setText(destination.getText().toString()); destination.setText(a); pressAction(swap,()->toast("مبدا و مقصد جابه‌جا شد")); });
         route.addView(routeFrame,new LinearLayout.LayoutParams(-1,dp(113))); gap(route,10);
         LinearLayout drow=new LinearLayout(this); drow.setOrientation(LinearLayout.HORIZONTAL); drow.setGravity(Gravity.CENTER_VERTICAL); travelDate=field("تاریخ رفت"); travelDate.setFocusable(false); travelDate.setCompoundDrawablesWithIntrinsicBounds(0,0,android.R.drawable.ic_menu_my_calendar,0); travelDate.setOnClickListener(v->showPersianCalendar()); drow.addView(travelDate,new LinearLayout.LayoutParams(-1,dp(54))); route.addView(drow); p.addView(route); gap(p,9);
-        LinearLayout passengers=section("مسافران");
-        passengers.addView(makePassengerStepper("بزرگسال (۱۲ سال به بالا)",true)); gap(passengers,7);
-        passengers.addView(makePassengerStepper("کودک (۲ تا ۱۲ سال)",false)); gap(passengers,7);
-        passengers.addView(makeInfantStepper()); gap(passengers,10);
-        RadioGroup passengerGroup=new RadioGroup(this); passengerGroup.setOrientation(RadioGroup.VERTICAL); passengerGroup.setGravity(Gravity.RIGHT);
-        RadioButton normal=new RadioButton(this); normal.setId(View.generateViewId()); normal.setText("مسافران عادی"); normal.setTextColor(TEXT); normal.setButtonTintList(ColorStateList.valueOf(BLUE)); normal.setChecked(true);
-        RadioButton men=new RadioButton(this); men.setId(View.generateViewId()); men.setText("ویژه برادران"); men.setTextColor(TEXT); men.setButtonTintList(ColorStateList.valueOf(BLUE));
-        RadioButton women=new RadioButton(this); women.setId(View.generateViewId()); women.setText("ویژه خواهران"); women.setTextColor(TEXT); women.setButtonTintList(ColorStateList.valueOf(BLUE));
-        passengerGroup.addView(normal); passengerGroup.addView(men); passengerGroup.addView(women);
-        passengerGroup.setOnCheckedChangeListener((g,id)->{ if(id==men.getId()) passengerType="men"; else if(id==women.getId()) passengerType="women"; else passengerType="normal"; });
-        passengers.addView(passengerGroup); p.addView(passengers); gap(p,9);
+        adults=field(""); adults.setText("1"); adults.setFocusable(false);
+        children=field(""); children.setText("0"); children.setFocusable(false);
+        infants=field(""); infants.setText("0"); infants.setFocusable(false);
+        passengerSummary=label("مسافران     ۱ مسافر");
+        passengerSummary.setTextSize(17); passengerSummary.setTypeface(null,1); passengerSummary.setGravity(Gravity.RIGHT|Gravity.CENTER_VERTICAL);
+        passengerSummary.setPadding(dp(16),dp(8),dp(16),dp(8)); passengerSummary.setBackground(bg(FIELD,14,BORDER,1));
+        passengerSummary.setCompoundDrawablesWithIntrinsicBounds(android.R.drawable.ic_menu_manage,0,0,0);
+        passengerSummary.setOnClickListener(v->showPassengerDialog());
+        p.addView(passengerSummary,new LinearLayout.LayoutParams(-1,dp(58))); gap(p,9);
         LinearLayout search=section("تنظیمات جستجو"); trainNumber=field("شماره قطار"); trainNumber.setInputType(InputType.TYPE_CLASS_NUMBER); search.addView(trainNumber); gap(search,7);
         priceMode=new CheckBox(this); priceMode.setText("جستجو با بازه قیمت"); priceMode.setTextColor(TEXT); priceMode.setButtonTintList(ColorStateList.valueOf(BLUE)); search.addView(priceMode); minPrice=field("از قیمت (ریال)"); minPrice.setInputType(InputType.TYPE_CLASS_NUMBER); maxPrice=field("تا قیمت (ریال)"); maxPrice.setInputType(InputType.TYPE_CLASS_NUMBER); search.addView(minPrice); gap(search,6); search.addView(maxPrice); gap(search,7);
         coupe=new CheckBox(this); coupe.setText("فقط کوپه دربست"); coupe.setTextColor(TEXT); coupe.setButtonTintList(ColorStateList.valueOf(BLUE)); alarm=new CheckBox(this); alarm.setText("آلارم صوتی پیدا شدن بلیت"); alarm.setTextColor(TEXT); alarm.setTypeface(null,1); alarm.setButtonTintList(ColorStateList.valueOf(BLUE)); alarm.setChecked(true); search.addView(coupe); search.addView(alarm); p.addView(search); gap(p,9);
@@ -164,6 +162,39 @@ public class MainActivity extends Activity {
         updateActionButtons();
         LinearLayout container=new LinearLayout(this); container.setOrientation(LinearLayout.VERTICAL); container.addView(scroll,new LinearLayout.LayoutParams(-1,-1)); return container;
     }
+
+    private void showPassengerDialog(){
+        final int[] counts={parseInt(adults.getText().toString(),1),parseInt(children.getText().toString(),0),parseInt(infants.getText().toString(),0)};
+        LinearLayout box=new LinearLayout(this); box.setOrientation(LinearLayout.VERTICAL); box.setPadding(dp(16),dp(8),dp(16),dp(14)); box.setBackgroundColor(PANEL);
+        TextView title=label("مسافران"); title.setTextSize(20); title.setTypeface(null,1); box.addView(title,new LinearLayout.LayoutParams(-1,dp(48)));
+        TextView[] values={new TextView(this),new TextView(this),new TextView(this)};
+        box.addView(makeDialogPassengerRow("بزرگسال (۱۲ سال به بالا)",0,counts,values)); gap(box,6);
+        box.addView(makeDialogPassengerRow("کودک (۲ تا ۱۲ سال)",1,counts,values)); gap(box,6);
+        box.addView(makeDialogPassengerRow("نوزاد (۱۰ روز تا ۲ سال)",2,counts,values));
+        TextView limit=label("ⓘ حداکثر تعداد مسافران ۶ نفر است."); limit.setTextColor(RED); limit.setGravity(Gravity.CENTER); box.addView(limit,new LinearLayout.LayoutParams(-1,dp(44)));
+        View line=new View(this); line.setBackgroundColor(BORDER); box.addView(line,new LinearLayout.LayoutParams(-1,dp(1)));
+        RadioGroup group=new RadioGroup(this); group.setOrientation(RadioGroup.VERTICAL); group.setGravity(Gravity.RIGHT);
+        RadioButton normal=dialogRadio("مسافران عادی","normal"); RadioButton men=dialogRadio("ویژه برادران","men"); RadioButton women=dialogRadio("ویژه خواهران","women");
+        group.addView(normal); group.addView(men); group.addView(women);
+        if("men".equals(passengerType))men.setChecked(true); else if("women".equals(passengerType))women.setChecked(true); else normal.setChecked(true);
+        group.setOnCheckedChangeListener((g,id)->{ if(id==men.getId())passengerType="men"; else if(id==women.getId())passengerType="women"; else passengerType="normal"; });
+        box.addView(group);
+        Button confirm=button("تأیید",BLUE); box.addView(confirm,new LinearLayout.LayoutParams(-1,dp(54)));
+        AlertDialog dialog=new AlertDialog.Builder(this).setView(box).create();
+        confirm.setOnClickListener(v->{ adults.setText(String.valueOf(counts[0])); children.setText(String.valueOf(counts[1])); infants.setText(String.valueOf(counts[2])); updatePassengerSummary(); dialog.dismiss(); });
+        dialog.setOnShowListener(d->{ WindowManager.LayoutParams lp=dialog.getWindow().getAttributes(); lp.width=WindowManager.LayoutParams.MATCH_PARENT; dialog.getWindow().setAttributes(lp); });
+        dialog.show();
+    }
+    private RadioButton dialogRadio(String text,String tag){ RadioButton r=new RadioButton(this); r.setId(View.generateViewId()); r.setText(text); r.setTag(tag); r.setTextColor(TEXT); r.setTextSize(16); r.setGravity(Gravity.RIGHT|Gravity.CENTER_VERTICAL); r.setButtonTintList(ColorStateList.valueOf(BLUE)); return r; }
+    private LinearLayout makeDialogPassengerRow(String title,int index,int[] counts,TextView[] values){
+        LinearLayout row=new LinearLayout(this); row.setOrientation(LinearLayout.HORIZONTAL); row.setGravity(Gravity.CENTER_VERTICAL); row.setLayoutDirection(View.LAYOUT_DIRECTION_LTR);
+        Button minus=button("−",BLUE), plus=button("+",BLUE); TextView value=label(String.valueOf(counts[index])); value.setGravity(Gravity.CENTER); value.setTextSize(18); values[index]=value;
+        TextView name=label(title); name.setTextSize(15); name.setGravity(Gravity.RIGHT|Gravity.CENTER_VERTICAL);
+        minus.setOnClickListener(v->{ int min=index==0?1:0; if(counts[index]>min){ counts[index]--; value.setText(String.valueOf(counts[index])); } });
+        plus.setOnClickListener(v->{ int total=counts[0]+counts[1]+counts[2]; if(total>=6){ toast("حداکثر تعداد مسافران ۶ نفر است"); return; } counts[index]++; value.setText(String.valueOf(counts[index])); });
+        row.addView(minus,new LinearLayout.LayoutParams(dp(52),dp(48))); gapH(row,5); row.addView(value,new LinearLayout.LayoutParams(dp(42),dp(48))); gapH(row,5); row.addView(plus,new LinearLayout.LayoutParams(dp(52),dp(48))); row.addView(name,new LinearLayout.LayoutParams(0,dp(58),1)); return row;
+    }
+    private void updatePassengerSummary(){ int total=parseInt(adults.getText().toString(),1)+parseInt(children.getText().toString(),0)+parseInt(infants.getText().toString(),0); String type="normal".equals(passengerType)?"":"  •  "+("men".equals(passengerType)?"ویژه برادران":"ویژه خواهران"); passengerSummary.setText("مسافران     "+total+" مسافر"+type); }
 
     private LinearLayout makePassengerStepper(String text,boolean adult){
         LinearLayout row=new LinearLayout(this); row.setOrientation(LinearLayout.HORIZONTAL); row.setGravity(Gravity.CENTER_VERTICAL); row.setLayoutDirection(View.LAYOUT_DIRECTION_LTR); row.setBackground(bg(FIELD,14,BORDER,1)); row.setPadding(dp(10),dp(5),dp(10),dp(5));
