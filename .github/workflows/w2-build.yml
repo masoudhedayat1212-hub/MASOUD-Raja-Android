@@ -19,7 +19,7 @@ jobs:
           distribution: temurin
           java-version: '17'
 
-      - name: Prepare W2 from W1
+      - name: Prepare W2 from V3 reference
         shell: bash
         run: |
           set -euo pipefail
@@ -33,7 +33,17 @@ jobs:
           sed -i 's/import android.app.RingtoneManager;/import android.media.RingtoneManager;/' "$MAIN"
 
           mkdir -p "$APP/app/src/main/res/drawable-nodpi"
-          base64 -d w2/header_reference.b64 > "$APP/app/src/main/res/drawable-nodpi/w2_header_reference.jpg"
+          python3 - <<'PY'
+          import base64
+          from pathlib import Path
+          source = Path('w2/header_reference.b64').read_text(encoding='utf-8')
+          clean = ''.join(ch for ch in source if ch.isalnum() or ch in '+/=')
+          clean += '=' * (-len(clean) % 4)
+          image = base64.b64decode(clean, validate=False)
+          if not image.startswith(b'\\xff\\xd8\\xff'):
+              raise SystemExit('Invalid JPEG header')
+          Path('buildsrc/MASOUD_Android/app/src/main/res/drawable-nodpi/w2_header_reference.jpg').write_bytes(image)
+          PY
           test -s "$APP/app/src/main/res/drawable-nodpi/w2_header_reference.jpg"
           file "$APP/app/src/main/res/drawable-nodpi/w2_header_reference.jpg"
 
