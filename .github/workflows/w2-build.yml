@@ -66,7 +66,7 @@ jobs:
           grep -q 'R.drawable.w2_header_reference' w2/MainActivity.java
           ! grep -q 'MASOUD Raja Bot' w2/MainActivity.java
           ! grep -q 'tabPassengers' w2/MainActivity.java
-          grep -q 'section("تعداد مسافر")' w2/MainActivity.java
+          grep -q 'section("مسافران")' w2/MainActivity.java
           grep -q 'new WebView(this)' w2/MainActivity.java
           grep -q 'injectLogin()' w2/MainActivity.java
           grep -q 'injectSearchForm()' w2/MainActivity.java
