@@ -1,4 +1,4 @@
-name: W6 Build
+name: W7 Build
 
 on:
   workflow_dispatch:
@@ -7,6 +7,7 @@ on:
       - '.github/workflows/w2-build.yml'
       - 'w2/MainActivity.java'
       - 'w2/header_parts_v2/**'
+      - 'w2/icon_w7_parts/**'
 
 jobs:
   build:
@@ -19,7 +20,7 @@ jobs:
           distribution: temurin
           java-version: '17'
 
-      - name: Prepare W6 from W4 verified reference
+      - name: Prepare W7 from W4 verified reference
         shell: bash
         run: |
           set -euo pipefail
@@ -46,7 +47,19 @@ jobs:
           PY
           test -s "$APP/app/src/main/res/drawable-nodpi/w2_header_reference.jpg"
           file "$APP/app/src/main/res/drawable-nodpi/w2_header_reference.jpg"
-          cp "$APP/app/src/main/res/drawable-nodpi/w2_header_reference.jpg" "$APP/app/src/main/res/drawable-nodpi/w6_train_icon.jpg"
+          python3 - <<'PY'
+          import base64
+          from pathlib import Path
+          source = ''.join(p.read_text(encoding='utf-8') for p in sorted(Path('w2/icon_w7_parts').glob('part_*.b64')))
+          clean = ''.join(ch for ch in source if ch.isalnum() or ch in '+/=')
+          clean += '=' * (-len(clean) % 4)
+          image = base64.b64decode(clean, validate=False)
+          if image[:3] != bytes((255, 216, 255)):
+              raise SystemExit('Invalid W7 icon JPEG')
+          Path('buildsrc/MASOUD_Android/app/src/main/res/drawable-nodpi/w7_train_icon.jpg').write_bytes(image)
+          PY
+          test -s "$APP/app/src/main/res/drawable-nodpi/w7_train_icon.jpg"
+          file "$APP/app/src/main/res/drawable-nodpi/w7_train_icon.jpg"
           python3 - <<'PY'
           import re
           from pathlib import Path
@@ -54,11 +67,11 @@ jobs:
           t=p.read_text(encoding='utf-8')
           t=re.sub(r'\s+android:icon="[^"]*"','',t)
           t=re.sub(r'\s+android:roundIcon="[^"]*"','',t)
-          t=t.replace('<application','<application android:icon="@drawable/w6_train_icon" android:roundIcon="@drawable/w6_train_icon"',1)
+          t=t.replace('<application','<application android:icon="@drawable/w7_train_icon" android:roundIcon="@drawable/w7_train_icon"',1)
           p.write_text(t,encoding='utf-8')
           PY
-          grep -q 'android:icon="@drawable/w6_train_icon"' "$APP/app/src/main/AndroidManifest.xml"
-          grep -q 'android:roundIcon="@drawable/w6_train_icon"' "$APP/app/src/main/AndroidManifest.xml"
+          grep -q 'android:icon="@drawable/w7_train_icon"' "$APP/app/src/main/AndroidManifest.xml"
+          grep -q 'android:roundIcon="@drawable/w7_train_icon"' "$APP/app/src/main/AndroidManifest.xml"
 
           python3 - <<'PY'
           from pathlib import Path
@@ -66,9 +79,9 @@ jobs:
           t=p.read_text(encoding='utf-8')
           t=t.replace("applicationId 'com.masoud.raja'","applicationId 'com.masoud.raja.w2real'")
           t=t.replace('applicationId "com.masoud.raja"','applicationId "com.masoud.raja.w2real"')
-          t=t.replace('versionCode 1','versionCode 36')
-          t=t.replace("versionName '1.0.0'","versionName 'W6'")
-          t=t.replace('versionName "1.0.0"','versionName "W6"')
+          t=t.replace('versionCode 1','versionCode 37')
+          t=t.replace("versionName '1.0.0'","versionName 'W7'")
+          t=t.replace('versionName "1.0.0"','versionName "W7"')
           p.write_text(t,encoding='utf-8')
           PY
 
@@ -80,9 +93,12 @@ jobs:
           ! grep -q 'MASOUD Raja Bot' w2/MainActivity.java
           ! grep -q 'tabPassengers' w2/MainActivity.java
           grep -q 'showPassengerDialog()' w2/MainActivity.java
-          grep -q 'version.setText("W6")' w2/MainActivity.java
+          grep -q 'version.setText("W7")' w2/MainActivity.java
           ! grep -q 'نوزاد' w2/MainActivity.java
           grep -q 'jalaliToGregorian' w2/MainActivity.java
+          grep -q 'enablePriceFormatting' w2/MainActivity.java
+          grep -q 'loginMissing' w2/MainActivity.java
+          grep -q 'setDropDownBackgroundDrawable' w2/MainActivity.java
           grep -q 'new WebView(this)' w2/MainActivity.java
           grep -q 'injectLogin()' w2/MainActivity.java
           grep -q 'injectSearchForm()' w2/MainActivity.java
@@ -103,10 +119,10 @@ jobs:
           test -s "$APK"
           unzip -t "$APK" >/dev/null
           mkdir -p "$GITHUB_WORKSPACE/output"
-          cp "$APK" "$GITHUB_WORKSPACE/output/w6.apk"
+          cp "$APK" "$GITHUB_WORKSPACE/output/w7.apk"
 
       - uses: actions/upload-artifact@v4
         with:
-          name: w6
-          path: output/w6.apk
+          name: w7
+          path: output/w7.apk
           if-no-files-found: error
