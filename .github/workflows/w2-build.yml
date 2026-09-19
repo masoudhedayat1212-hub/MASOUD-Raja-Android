@@ -1,4 +1,4 @@
-name: W11 Build
+name: W12 Build
 
 permissions:
   contents: write
@@ -23,7 +23,7 @@ jobs:
           distribution: temurin
           java-version: '17'
 
-      - name: Prepare W11 from W4 verified reference
+      - name: Prepare W12 from W4 verified reference
         shell: bash
         run: |
           set -euo pipefail
@@ -58,20 +58,20 @@ jobs:
           clean += '=' * (-len(clean) % 4)
           image = base64.b64decode(clean, validate=False)
           if image[:3] != bytes((255, 216, 255)):
-              raise SystemExit('Invalid W11 icon JPEG')
-          Path('buildsrc/MASOUD_Android/app/src/main/res/drawable-nodpi/w11_train_icon_source.jpg').write_bytes(image)
+              raise SystemExit('Invalid W12 icon JPEG')
+          Path('buildsrc/MASOUD_Android/app/src/main/res/drawable-nodpi/w12_train_icon_source.jpg').write_bytes(image)
           PY
-          test -s "$APP/app/src/main/res/drawable-nodpi/w11_train_icon_source.jpg"
-          file "$APP/app/src/main/res/drawable-nodpi/w11_train_icon_source.jpg"
+          test -s "$APP/app/src/main/res/drawable-nodpi/w12_train_icon_source.jpg"
+          file "$APP/app/src/main/res/drawable-nodpi/w12_train_icon_source.jpg"
           python3 -m pip install --quiet pillow
           python3 - <<'PY'
           from PIL import Image, ImageOps
           from pathlib import Path
-          src=Image.open('buildsrc/MASOUD_Android/app/src/main/res/drawable-nodpi/w11_train_icon_source.jpg').convert('RGB')
+          src=Image.open('buildsrc/MASOUD_Android/app/src/main/res/drawable-nodpi/w12_train_icon_source.jpg').convert('RGB')
           icon=ImageOps.fit(src,(512,512),method=Image.Resampling.LANCZOS,centering=(0.43,0.5))
-          icon.save('buildsrc/MASOUD_Android/app/src/main/res/drawable-nodpi/w11_train_icon.png',optimize=True)
+          icon.save('buildsrc/MASOUD_Android/app/src/main/res/drawable-nodpi/w12_train_icon.png',optimize=True)
           PY
-          test -s "$APP/app/src/main/res/drawable-nodpi/w11_train_icon.png"
+          test -s "$APP/app/src/main/res/drawable-nodpi/w12_train_icon.png"
           python3 - <<'PY'
           import re
           from pathlib import Path
@@ -79,11 +79,11 @@ jobs:
           t=p.read_text(encoding='utf-8')
           t=re.sub(r'\s+android:icon="[^"]*"','',t)
           t=re.sub(r'\s+android:roundIcon="[^"]*"','',t)
-          t=t.replace('<application','<application android:icon="@drawable/w11_train_icon" android:roundIcon="@drawable/w11_train_icon"',1)
+          t=t.replace('<application','<application android:icon="@drawable/w12_train_icon" android:roundIcon="@drawable/w12_train_icon"',1)
           p.write_text(t,encoding='utf-8')
           PY
-          grep -q 'android:icon="@drawable/w11_train_icon"' "$APP/app/src/main/AndroidManifest.xml"
-          grep -q 'android:roundIcon="@drawable/w11_train_icon"' "$APP/app/src/main/AndroidManifest.xml"
+          grep -q 'android:icon="@drawable/w12_train_icon"' "$APP/app/src/main/AndroidManifest.xml"
+          grep -q 'android:roundIcon="@drawable/w12_train_icon"' "$APP/app/src/main/AndroidManifest.xml"
 
           python3 - <<'PY'
           from pathlib import Path
@@ -91,9 +91,9 @@ jobs:
           t=p.read_text(encoding='utf-8')
           t=t.replace("applicationId 'com.masoud.raja'","applicationId 'com.masoud.raja.w2real'")
           t=t.replace('applicationId "com.masoud.raja"','applicationId "com.masoud.raja.w2real"')
-          t=t.replace('versionCode 1','versionCode 41')
-          t=t.replace("versionName '1.0.0'","versionName 'W11'")
-          t=t.replace('versionName "1.0.0"','versionName "W11"')
+          t=t.replace('versionCode 1','versionCode 42')
+          t=t.replace("versionName '1.0.0'","versionName 'W12'")
+          t=t.replace('versionName "1.0.0"','versionName "W12"')
           p.write_text(t,encoding='utf-8')
           PY
 
@@ -105,7 +105,7 @@ jobs:
           ! grep -q 'MASOUD Raja Bot' w2/MainActivity.java
           ! grep -q 'tabPassengers' w2/MainActivity.java
           grep -q 'showPassengerDialog()' w2/MainActivity.java
-          grep -q 'version.setText("W11")' w2/MainActivity.java
+          grep -q 'version.setText("W12")' w2/MainActivity.java
           grep -q 'injectSearchFormV11()' w2/MainActivity.java
           grep -q 'شماره موبایل و رمز داخل فرم رجا ثبت شد' w2/MainActivity.java
           grep -q 'logScroll.fullScroll' w2/MainActivity.java
@@ -140,25 +140,25 @@ jobs:
           test -s "$APK"
           unzip -t "$APK" >/dev/null
           mkdir -p "$GITHUB_WORKSPACE/output"
-          cp "$APK" "$GITHUB_WORKSPACE/output/w11.apk"
+          cp "$APK" "$GITHUB_WORKSPACE/output/w12.apk"
 
-      - name: Save W11 APK in repository
+      - name: Save W12 APK in repository
         shell: bash
         run: |
           set -euo pipefail
           mkdir -p releases
-          cp output/w11.apk releases/MASOUD_Raja_W11.apk
+          cp output/w12.apk releases/MASOUD_Raja_W12.apk
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add -f releases/MASOUD_Raja_W11.apk
+          git add -f releases/MASOUD_Raja_W12.apk
           if git diff --cached --quiet; then
             exit 0
           fi
-          git commit -m "Save installable W11 APK"
+          git commit -m "Save installable W12 APK"
           git push
 
       - uses: actions/upload-artifact@v4
         with:
-          name: w11
-          path: output/w11.apk
+          name: w12
+          path: output/w12.apk
           if-no-files-found: error
