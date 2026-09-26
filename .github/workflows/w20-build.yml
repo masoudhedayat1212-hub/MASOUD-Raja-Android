@@ -1,0 +1,164 @@
+name: W20 Build
+
+permissions:
+  contents: write
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - '.github/workflows/w20-build.yml'
+      - 'w20/MainActivity.java'
+      - 'w2/header_parts_v2/**'
+      - 'w2/icon_w7_parts/**'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Prepare W20 from W19 reference
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf buildsrc output
+          unzip -q MASOUD_Android_v1.zip -d buildsrc
+          APP=buildsrc/MASOUD_Android
+          MAIN="$APP/app/src/main/java/com/masoud/raja/MainActivity.java"
+          cp w20/MainActivity.java "$MAIN"
+
+          sed -i 's/import android.app.Ringtone;/import android.media.Ringtone;/' "$MAIN"
+          sed -i 's/import android.app.RingtoneManager;/import android.media.RingtoneManager;/' "$MAIN"
+
+          mkdir -p "$APP/app/src/main/res/drawable-nodpi"
+          python3 - <<'PY'
+          import base64
+          from pathlib import Path
+          source=''.join(p.read_text(encoding='utf-8') for p in sorted(Path('w2/header_parts_v2').glob('part_*.b64')))
+          clean=''.join(ch for ch in source if ch.isalnum() or ch in '+/=')
+          clean += '=' * (-len(clean) % 4)
+          image=base64.b64decode(clean,validate=False)
+          if image[:3] != bytes((255,216,255)):
+              raise SystemExit('Invalid JPEG header')
+          Path('buildsrc/MASOUD_Android/app/src/main/res/drawable-nodpi/w2_header_reference.jpg').write_bytes(image)
+          PY
+
+          python3 - <<'PY'
+          import base64
+          from pathlib import Path
+          source=''.join(p.read_text(encoding='utf-8') for p in sorted(Path('w2/icon_w7_parts').glob('part_*.b64')))
+          clean=''.join(ch for ch in source if ch.isalnum() or ch in '+/=')
+          clean += '=' * (-len(clean) % 4)
+          image=base64.b64decode(clean,validate=False)
+          if image[:3] != bytes((255,216,255)):
+              raise SystemExit('Invalid W20 icon JPEG')
+          Path('buildsrc/MASOUD_Android/app/src/main/res/drawable-nodpi/w12_train_icon_source.jpg').write_bytes(image)
+          PY
+
+          python3 -m pip install --quiet pillow
+          python3 - <<'PY'
+          from PIL import Image, ImageOps
+          src=Image.open('buildsrc/MASOUD_Android/app/src/main/res/drawable-nodpi/w12_train_icon_source.jpg').convert('RGB')
+          icon=ImageOps.fit(src,(512,512),method=Image.Resampling.LANCZOS,centering=(0.43,0.5))
+          icon.save('buildsrc/MASOUD_Android/app/src/main/res/drawable-nodpi/w12_train_icon.png',optimize=True)
+          PY
+
+          mkdir -p "$APP/app/src/main/res/xml"
+          cat > "$APP/app/src/main/res/xml/w20_accessibility_service.xml" <<'EOF'
+          <?xml version="1.0" encoding="utf-8"?>
+          <accessibility-service xmlns:android="http://schemas.android.com/apk/res/android"
+              android:accessibilityEventTypes="typeWindowStateChanged|typeWindowContentChanged|typeViewClicked|typeViewFocused|typeViewTextChanged|typeViewScrolled"
+              android:accessibilityFeedbackType="feedbackGeneric"
+              android:notificationTimeout="80"
+              android:canRetrieveWindowContent="true"
+              android:accessibilityFlags="flagReportViewIds|flagRetrieveInteractiveWindows"
+              android:packageNames="com.android.chrome" />
+          EOF
+
+          python3 - <<'PY'
+          import re
+          from pathlib import Path
+          p=Path('buildsrc/MASOUD_Android/app/src/main/AndroidManifest.xml')
+          t=p.read_text(encoding='utf-8')
+          t=re.sub(r'\s+android:icon="[^"]*"','',t)
+          t=re.sub(r'\s+android:roundIcon="[^"]*"','',t)
+          t=t.replace('<application','<application android:icon="@drawable/w12_train_icon" android:roundIcon="@drawable/w12_train_icon"',1)
+          service='''\n        <service\n            android:name="com.masoud.raja.MainActivity$ChromeAutomationService"\n            android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE"\n            android:exported="false">\n            <intent-filter>\n                <action android:name="android.accessibilityservice.AccessibilityService" />\n            </intent-filter>\n            <meta-data\n                android:name="android.accessibilityservice"\n                android:resource="@xml/w20_accessibility_service" />\n        </service>\n'''
+          if 'ChromeAutomationService' not in t:
+              t=t.replace('</application>',service+'    </application>',1)
+          p.write_text(t,encoding='utf-8')
+          PY
+
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('buildsrc/MASOUD_Android/app/build.gradle')
+          t=p.read_text(encoding='utf-8')
+          t=t.replace("applicationId 'com.masoud.raja'","applicationId 'com.masoud.raja.w20'")
+          t=t.replace('applicationId "com.masoud.raja"','applicationId "com.masoud.raja.w20"')
+          t=t.replace('versionCode 1','versionCode 50')
+          t=t.replace("versionName '1.0.0'","versionName 'W20'")
+          t=t.replace('versionName "1.0.0"','versionName "W20"')
+          p.write_text(t,encoding='utf-8')
+          PY
+
+      - name: Verify W20 source and manifest
+        shell: bash
+        run: |
+          set -euo pipefail
+          APP=buildsrc/MASOUD_Android
+          grep -q 'version.setText("W20")' w20/MainActivity.java
+          grep -q 'setPackage("com.android.chrome")' w20/MainActivity.java
+          grep -q 'ChromeAutomationService' w20/MainActivity.java
+          grep -q 'ACTION_ACCESSIBILITY_SETTINGS' w20/MainActivity.java
+          grep -q 'pullRefresh()' w20/MainActivity.java
+          grep -q 'adjustCounter' w20/MainActivity.java
+          grep -q 'findAndChooseTrain' w20/MainActivity.java
+          grep -q 'ChromeAutomationService' "$APP/app/src/main/AndroidManifest.xml"
+          grep -q 'w20_accessibility_service' "$APP/app/src/main/AndroidManifest.xml"
+          grep -q 'com.android.chrome' "$APP/app/src/main/res/xml/w20_accessibility_service.xml"
+          grep -q "applicationId 'com.masoud.raja.w20'" "$APP/app/build.gradle" || grep -q 'applicationId "com.masoud.raja.w20"' "$APP/app/build.gradle"
+          grep -q 'versionCode 50' "$APP/app/build.gradle"
+
+      - name: Build APK
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd buildsrc/MASOUD_Android
+          gradle assembleDebug --stacktrace
+
+      - name: Verify APK
+        shell: bash
+        run: |
+          set -euo pipefail
+          APK=$(find buildsrc/MASOUD_Android/app/build/outputs/apk -type f -name '*.apk' | head -1)
+          test -s "$APK"
+          unzip -t "$APK" >/dev/null
+          mkdir -p "$GITHUB_WORKSPACE/output"
+          cp "$APK" "$GITHUB_WORKSPACE/output/w20.apk"
+
+      - name: Save W20 APK in repository
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p releases
+          cp output/w20.apk releases/MASOUD_Raja_W20.apk
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -f releases/MASOUD_Raja_W20.apk
+          if git diff --cached --quiet; then
+            exit 0
+          fi
+          git commit -m "Save installable W20 APK"
+          git push
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: w20
+          path: output/w20.apk
+          if-no-files-found: error
