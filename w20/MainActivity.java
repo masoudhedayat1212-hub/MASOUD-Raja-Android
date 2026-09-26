@@ -939,22 +939,6 @@ public class MainActivity extends Activity {
             return best;
         }
 
-        private android.view.accessibility.AccessibilityNodeInfo findText(android.view.accessibility.AccessibilityNodeInfo root,String[] terms){return findText(root,terms,0);}
-
-        private android.view.accessibility.AccessibilityNodeInfo findText(android.view.accessibility.AccessibilityNodeInfo root,String[] terms,int unused){
-            android.view.accessibility.AccessibilityNodeInfo best=null;int len=Integer.MAX_VALUE;
-            for(android.view.accessibility.AccessibilityNodeInfo n:all(root)){
-                String z=norm(nodeText(n));
-                for(String term:terms){
-                    String q=norm(term);
-                    if(z.equals(q)||(q.length()>2&&z.contains(q))){
-                        if(z.length()<len){len=z.length();best=n;}
-                    }
-                }
-            }
-            return best;
-        }
-
         private android.view.accessibility.AccessibilityNodeInfo findExact(android.view.accessibility.AccessibilityNodeInfo root,String... terms){
             for(android.view.accessibility.AccessibilityNodeInfo n:all(root)){
                 String z=norm(nodeText(n));
