@@ -89,7 +89,7 @@ jobs:
           t=re.sub(r'\s+android:icon="[^"]*"','',t)
           t=re.sub(r'\s+android:roundIcon="[^"]*"','',t)
           t=t.replace('<application','<application android:icon="@drawable/w12_train_icon" android:roundIcon="@drawable/w12_train_icon"',1)
-          service='''\n        <service\n            android:name="com.masoud.raja.MainActivity$ChromeAutomationService"\n            android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE"\n            android:exported="false">\n            <intent-filter>\n                <action android:name="android.accessibilityservice.AccessibilityService" />\n            </intent-filter>\n            <meta-data\n                android:name="android.accessibilityservice"\n                android:resource="@xml/w20_accessibility_service" />\n        </service>\n'''
+          service='''\n        <service\n            android:name="com.masoud.raja.MainActivity$ChromeAutomationService"\n            android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE"\n            android:exported="true">\n            <intent-filter>\n                <action android:name="android.accessibilityservice.AccessibilityService" />\n            </intent-filter>\n            <meta-data\n                android:name="android.accessibilityservice"\n                android:resource="@xml/w20_accessibility_service" />\n        </service>\n'''
           if 'ChromeAutomationService' not in t:
               t=t.replace('</application>',service+'    </application>',1)
           p.write_text(t,encoding='utf-8')
@@ -101,7 +101,7 @@ jobs:
           t=p.read_text(encoding='utf-8')
           t=t.replace("applicationId 'com.masoud.raja'","applicationId 'com.masoud.raja.w20'")
           t=t.replace('applicationId "com.masoud.raja"','applicationId "com.masoud.raja.w20"')
-          t=t.replace('versionCode 1','versionCode 50')
+          t=t.replace('versionCode 1','versionCode 51')
           t=t.replace("versionName '1.0.0'","versionName 'W20'")
           t=t.replace('versionName "1.0.0"','versionName "W20"')
           p.write_text(t,encoding='utf-8')
@@ -123,7 +123,7 @@ jobs:
           grep -q 'w20_accessibility_service' "$APP/app/src/main/AndroidManifest.xml"
           grep -q 'com.android.chrome' "$APP/app/src/main/res/xml/w20_accessibility_service.xml"
           grep -q "applicationId 'com.masoud.raja.w20'" "$APP/app/build.gradle" || grep -q 'applicationId "com.masoud.raja.w20"' "$APP/app/build.gradle"
-          grep -q 'versionCode 50' "$APP/app/build.gradle"
+          grep -q 'versionCode 51' "$APP/app/build.gradle"
 
       - name: Build APK
         shell: bash
