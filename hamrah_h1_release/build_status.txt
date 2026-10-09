@@ -1,4 +1,3 @@
-RESULT=FAILED
-COMPILE=skipped
-VERIFY=skipped
-RUN_ID=37926604084
+RESULT=SUCCESS
+277a38a952baf346bfa57abf84edd524e3a352ad93d28991d42e1fac00bbcc8c  hamrah_h1_release/HamrahAssistant_H1_debug.apk
+RUN_ID=37926737355
