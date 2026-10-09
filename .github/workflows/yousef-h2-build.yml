@@ -1,0 +1,104 @@
+name: Yousef H2 Native Android build
+on:
+  push:
+    branches: [yousef-h2-build]
+    paths:
+      - 'yousef_h2_payload/**'
+      - '.github/workflows/yousef-h2-build.yml'
+jobs:
+  build-yousef:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout source branch
+        uses: actions/checkout@v4
+      - name: Extract locked H1 source, apply exact H2 patch
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p yousef-build
+          cat hamrah_h1_payload/p1.txt hamrah_h1_payload/p2.txt hamrah_h1_payload/p3.txt hamrah_h1_payload/p4.txt | base64 -d > /tmp/H1.tar.xz
+          echo '14f13efb2836f967b88ab0a04c29fb440235bd87e637d9d853454ba762476213  /tmp/H1.tar.xz' | sha256sum -c -
+          tar -xJf /tmp/H1.tar.xz -C yousef-build
+          cat yousef_h2_payload/p0.txt yousef_h2_payload/p1.txt yousef_h2_payload/p2.txt yousef_h2_payload/p3.txt yousef_h2_payload/p4.txt yousef_h2_payload/p5.txt | base64 -d > /tmp/H2_PATCH.tar.xz
+          echo '986947c1e9afba63977a13841cb2851a99464fe45abcad112c1e7e8b5535cb7d  /tmp/H2_PATCH.tar.xz' | sha256sum -c -
+          tar -xJf /tmp/H2_PATCH.tar.xz -C yousef-build
+          test -f yousef-build/app/src/main/java/ir/masoud/hamrah/YousefVoiceService.java
+      - name: Setup Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Run 25 real Java parser tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/yousef-test-classes
+          javac -encoding UTF-8 -d /tmp/yousef-test-classes yousef-build/app/src/main/java/ir/masoud/hamrah/CommandParser.java yousef-build/tests/ParserTest.java yousef-build/tests/H2ParserTest.java
+          java -cp /tmp/yousef-test-classes ParserTest
+          java -cp /tmp/yousef-test-classes H2ParserTest
+      - name: Install Android SDK 35 using runner SDK manager
+        shell: bash
+        run: |
+          set -euo pipefail
+          SDK_ROOT="${ANDROID_HOME:-/usr/local/lib/android/sdk}"
+          SDK_MANAGER="$(find "$SDK_ROOT/cmdline-tools" -path '*/bin/sdkmanager' -type f | sort -V | tail -1)"
+          test -x "$SDK_MANAGER"
+          yes | "$SDK_MANAGER" --sdk_root="$SDK_ROOT" --licenses >/dev/null || true
+          "$SDK_MANAGER" --sdk_root="$SDK_ROOT" 'platforms;android-35' 'build-tools;35.0.0'
+      - name: Setup Gradle 8.10.2
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.10.2'
+      - name: Compile Android application
+        id: compile
+        working-directory: yousef-build
+        shell: bash
+        run: |
+          set -o pipefail
+          gradle --no-daemon --stacktrace :app:assembleDebug 2>&1 | tee ../yousef_h2_compile.log
+      - name: Verify signed Android APK
+        id: verify
+        shell: bash
+        run: |
+          set -euo pipefail
+          APK=yousef-build/app/build/outputs/apk/debug/app-debug.apk
+          test -s "$APK"
+          unzip -t "$APK" | tail -1
+          "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --verbose "$APK"
+          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging "$APK" | head -5
+          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging "$APK" | grep "package: name='ir.masoud.yousef'"
+          cp "$APK" Yousef_H2_Install.apk
+          sha256sum Yousef_H2_Install.apk
+      - name: Upload APK artifact
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: Yousef_H2_Installable_APK
+          path: Yousef_H2_Install.apk
+          if-no-files-found: error
+          retention-days: 30
+      - name: Save result in isolated H2 branch
+        if: always()
+        shell: bash
+        run: |
+          set -e
+          mkdir -p yousef_h2_release
+          rm -f yousef_h2_release/Yousef_H2_Install.apk yousef_h2_release/status.txt
+          if [ "${{ steps.verify.outcome }}" = "success" ] && [ -s Yousef_H2_Install.apk ]; then
+            cp Yousef_H2_Install.apk yousef_h2_release/
+            echo "RESULT=SUCCESS" > yousef_h2_release/status.txt
+            sha256sum yousef_h2_release/Yousef_H2_Install.apk >> yousef_h2_release/status.txt
+          else
+            echo "RESULT=FAILED" > yousef_h2_release/status.txt
+            echo "COMPILE=${{ steps.compile.outcome }}" >> yousef_h2_release/status.txt
+            echo "VERIFY=${{ steps.verify.outcome }}" >> yousef_h2_release/status.txt
+            if test -f yousef_h2_compile.log; then tail -n 95 yousef_h2_compile.log >> yousef_h2_release/status.txt; fi
+          fi
+          echo "RUN_ID=${GITHUB_RUN_ID}" >> yousef_h2_release/status.txt
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add yousef_h2_release
+          git commit -m "H2 APK verified build status [skip ci]" || true
+          git push origin HEAD:yousef-h2-build
