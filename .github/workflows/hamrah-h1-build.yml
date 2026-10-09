@@ -9,7 +9,7 @@ jobs:
   build-h1:
     runs-on: ubuntu-latest
     permissions:
-      contents: read
+      contents: write
     steps:
       - name: Checkout isolated branch
         uses: actions/checkout@v4
@@ -35,9 +35,14 @@ jobs:
         with:
           gradle-version: '8.10.2'
       - name: Build debug-signed H1 APK
+        id: compile
         working-directory: hamrah-h1
-        run: gradle --no-daemon --stacktrace :app:assembleDebug
+        shell: bash
+        run: |
+          set -o pipefail
+          gradle --no-daemon --stacktrace :app:assembleDebug 2>&1 | tee ../h1_compile.log
       - name: Verify APK package integrity and signature
+        id: verify
         shell: bash
         run: |
           set -euo pipefail
@@ -55,3 +60,26 @@ jobs:
           path: HamrahAssistant_H1_debug.apk
           if-no-files-found: error
           retention-days: 30
+      - name: Publish verified APK or failure report on isolated branch
+        if: always()
+        shell: bash
+        run: |
+          set -e
+          mkdir -p hamrah_h1_release
+          rm -f hamrah_h1_release/HamrahAssistant_H1_debug.apk hamrah_h1_release/build_status.txt
+          if [ "${{ steps.verify.outcome }}" = "success" ] && [ -s HamrahAssistant_H1_debug.apk ]; then
+            cp HamrahAssistant_H1_debug.apk hamrah_h1_release/
+            echo "RESULT=SUCCESS" >> hamrah_h1_release/build_status.txt
+            sha256sum hamrah_h1_release/HamrahAssistant_H1_debug.apk >> hamrah_h1_release/build_status.txt
+          else
+            echo "RESULT=FAILED" >> hamrah_h1_release/build_status.txt
+            echo "COMPILE=${{ steps.compile.outcome }}" >> hamrah_h1_release/build_status.txt
+            echo "VERIFY=${{ steps.verify.outcome }}" >> hamrah_h1_release/build_status.txt
+            if test -f h1_compile.log; then tail -n 60 h1_compile.log >> hamrah_h1_release/build_status.txt; fi
+          fi
+          echo "RUN_ID=${GITHUB_RUN_ID}" >> hamrah_h1_release/build_status.txt
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add hamrah_h1_release
+          git commit -m "H1 APK build result (isolated branch) [skip ci]" || true
+          git push origin HEAD:hamrah-assistant-h1-apk-build
