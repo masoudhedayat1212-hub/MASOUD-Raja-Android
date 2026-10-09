@@ -1,0 +1,57 @@
+name: Hamrah H1 Android APK (isolated)
+on:
+  push:
+    branches: [hamrah-assistant-h1-apk-build]
+    paths:
+      - 'hamrah_h1_payload/**'
+      - '.github/workflows/hamrah-h1-build.yml'
+jobs:
+  build-h1:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout isolated branch
+        uses: actions/checkout@v4
+      - name: Verify & unpack exact H1 source
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p hamrah-h1
+          cat hamrah_h1_payload/p1.txt hamrah_h1_payload/p2.txt hamrah_h1_payload/p3.txt hamrah_h1_payload/p4.txt | base64 -d > /tmp/H1_full_src.tar.xz
+          echo '14f13efb2836f967b88ab0a04c29fb440235bd87e637d9d853454ba762476213  /tmp/H1_full_src.tar.xz' | sha256sum -c -
+          tar -xJf /tmp/H1_full_src.tar.xz -C hamrah-h1
+      - name: Setup Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+      - name: Install SDK 35
+        run: sdkmanager 'platforms;android-35' 'build-tools;35.0.0'
+      - name: Setup Gradle 8.10.2
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.10.2'
+      - name: Build debug-signed H1 APK
+        working-directory: hamrah-h1
+        run: gradle --no-daemon --stacktrace :app:assembleDebug
+      - name: Verify APK package integrity and signature
+        shell: bash
+        run: |
+          set -euo pipefail
+          APK=hamrah-h1/app/build/outputs/apk/debug/app-debug.apk
+          test -s "$APK"
+          unzip -t "$APK" | tail -1
+          "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --verbose "$APK"
+          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging "$APK" | head -5
+          cp "$APK" HamrahAssistant_H1_debug.apk
+          sha256sum HamrahAssistant_H1_debug.apk
+      - name: Upload installable APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: HamrahAssistant_H1_Installable_APK
+          path: HamrahAssistant_H1_debug.apk
+          if-no-files-found: error
+          retention-days: 30
