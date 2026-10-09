@@ -24,6 +24,7 @@ jobs:
           cat yousef_h2_payload/p0.txt yousef_h2_payload/p1.txt yousef_h2_payload/p2.txt yousef_h2_payload/p3.txt yousef_h2_payload/p4.txt yousef_h2_payload/p5.txt | base64 -d > /tmp/H2_PATCH.tar.xz
           echo '986947c1e9afba63977a13841cb2851a99464fe45abcad112c1e7e8b5535cb7d  /tmp/H2_PATCH.tar.xz' | sha256sum -c -
           tar -xJf /tmp/H2_PATCH.tar.xz -C yousef-build
+          (cd yousef-build && python ../yousef_h2_payload/apply_h2_fix.py)
           test -f yousef-build/app/src/main/java/ir/masoud/hamrah/YousefVoiceService.java
       - name: Setup Java 17
         uses: actions/setup-java@v4
